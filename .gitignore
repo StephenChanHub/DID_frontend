@@ -1,0 +1,8 @@
+node_modules
+dist
+public
+
+
+# TypeScript 编译产物
+src/**/*.js
+src/**/*.js.map
