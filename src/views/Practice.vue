@@ -156,11 +156,46 @@ const fetchMaterialDetail = async (id: number) => {
   }
 };
 
-// 根据预览页筛选条件获取练习卡片列表（保持当前点击素材置顶）
+const syncFavoriteState = (material: any) => {
+  if (material?.id && typeof material?.isFavorited === 'boolean') {
+    favoriteCards[material.id] = material.isFavorited;
+  } else if (material?.id && favoriteCards[material.id] === undefined) {
+    favoriteCards[material.id] = false;
+  }
+};
+
+// 根据来源获取练习卡片列表（预览筛选或收藏列表）
 const fetchPracticeMaterials = async () => {
   const currentId = Number(route.params.id);
   const level = route.query.level as string | undefined;
   const type = route.query.type as string | undefined;
+  const source = route.query.source as string | undefined;
+
+  // 收藏来源：优先按收藏列表加载
+  if (source === 'favorites') {
+    try {
+      const favoritesRes: any = await request.get('/favorites');
+      const favoriteList = Array.isArray(favoritesRes) ? favoritesRes : [];
+      const favoriteIds = favoriteList
+        .map((item: any) => Number(item?.id))
+        .filter((id: number) => Number.isFinite(id) && id > 0);
+
+      const orderedIds = currentId
+        ? [currentId, ...favoriteIds.filter((id: number) => id !== currentId)]
+        : favoriteIds;
+
+      if (orderedIds.length > 0) {
+        const details = (await Promise.all(orderedIds.map((id: number) => fetchMaterialDetail(id)))).filter(Boolean);
+        if (details.length > 0) {
+          practiceList.value = details;
+          details.forEach((item: any) => syncFavoriteState(item));
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Fetch favorites list failed', err);
+    }
+  }
 
   if (level && type) {
     try {
@@ -181,6 +216,7 @@ const fetchPracticeMaterials = async () => {
 
       if (details.length > 0) {
         practiceList.value = details;
+        details.forEach((item: any) => syncFavoriteState(item));
         return;
       }
     } catch (err) {
@@ -192,6 +228,9 @@ const fetchPracticeMaterials = async () => {
   if (currentId) {
     const oneMaterial = await fetchMaterialDetail(currentId);
     practiceList.value = oneMaterial ? [oneMaterial] : [];
+    if (oneMaterial) {
+      syncFavoriteState(oneMaterial);
+    }
   } else {
     practiceList.value = [];
   }
@@ -331,10 +370,22 @@ const getOptionClass = (q: any, option: string) => {
 };
 
 // 切换收藏状态
-const toggleFavorite = (materialId: number) => {
-  favoriteCards[materialId] = !favoriteCards[materialId];
-  // 这里可以添加API调用，将收藏状态保存到后端
-  request.post('/practice/favorite', { materialId, favorite: favoriteCards[materialId] });
+const toggleFavorite = async (materialId: number) => {
+  const isFavorited = !!favoriteCards[materialId];
+
+  try {
+    if (isFavorited) {
+      await request.delete('/favorites/remove', {
+        data: { materialId }
+      });
+      favoriteCards[materialId] = false;
+    } else {
+      await request.post('/favorites/add', { materialId });
+      favoriteCards[materialId] = true;
+    }
+  } catch (error) {
+    console.error('收藏操作失败', error);
+  }
 };
 
 const clearAnswers = () => {

@@ -18,7 +18,7 @@
           <h2 class="nickname">{{ userStore.nickname }}</h2>
           <div class="level-coin-row">
             <span class="level-tag">LV: {{ userStore.level }}</span>
-            <img src="/public/coin.png" alt="Coin" class="coin">
+            <img src="/logo.png" alt="Coin" class="coin">
             <span class="points-tag">{{ userStore.points }}</span>
           </div>
         </div>
@@ -49,6 +49,31 @@
         </div>
       </div>
 
+      <div class="tab-content">
+        <div v-if="activeTab === 'bookmark'" class="bookmark-content">
+          <div class="material-grid">
+            <div v-for="item in favoriteMaterials" :key="item.id" class="material-card" @click="goToPractice(item.id)">
+              <div class="card-content">
+                <h3>{{ item.title }}</h3>
+                <p class="summary">{{ item.content }}</p>
+              </div>
+              <div class="card-footer">
+                <span class="type-badge">{{ item.level }}</span>
+                <span class="date">{{ formatDate(item.favorited_at || item.created_at) }}</span>
+              </div>
+            </div>
+
+            <div v-if="favoriteMaterials.length === 0" class="empty-state">
+              暂无收藏内容，去 Practice 页面点亮收藏星标吧。
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="placeholder-content">
+          {{ activeTab === 'bag' ? 'Bag 功能建设中' : 'Albums 功能建设中' }}
+        </div>
+      </div>
+
       <!-- 退出登录按钮 -->
       <button class="logout-btn" @click="handleLogout">退出登录</button>
     </div>
@@ -56,35 +81,77 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 import { useThemeStore } from '@/store/theme';
+import request from '@/api/request';
 
 const router = useRouter();
 const userStore = useUserStore();
 const themeStore = useThemeStore();
+const favoriteMaterials = ref<any[]>([]);
 
 // 当前激活的标签页
 const activeTab = ref<'bookmark' | 'bag' | 'albums'>('bookmark');
 
 const handleLogout = () => {
   userStore.logout();
+  favoriteMaterials.value = [];
   // 使用router跳转而不是window.location.href
   router.push('/do');
+};
+
+const fetchFavoriteMaterials = async () => {
+  if (!userStore.isLoggedIn) {
+    favoriteMaterials.value = [];
+    return;
+  }
+
+  try {
+    const res: any = await request.get('/favorites');
+    favoriteMaterials.value = Array.isArray(res) ? res : [];
+  } catch (error) {
+    console.error('获取收藏列表失败', error);
+    favoriteMaterials.value = [];
+  }
 };
 
 // 切换标签页
 const switchTab = (tab: 'bookmark' | 'bag' | 'albums') => {
   activeTab.value = tab;
-  // 这里可以根据tab加载不同的内容
-  console.log('切换到标签:', tab);
+  if (tab === 'bookmark') {
+    fetchFavoriteMaterials();
+  }
 };
 
 // 编辑资料
 const handleEditProfile = () => {
   userStore.toggleInfoModal(true);
 };
+
+const goToPractice = (id: number) => {
+  router.push({
+    path: `/practice/${id}`,
+    query: {
+      source: 'favorites'
+    }
+  });
+};
+
+const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString();
+
+onMounted(() => {
+  fetchFavoriteMaterials();
+});
+
+watch(() => userStore.isLoggedIn, (isLoggedIn) => {
+  if (isLoggedIn) {
+    fetchFavoriteMaterials();
+  } else {
+    favoriteMaterials.value = [];
+  }
+});
 </script>
 
 <style scoped>
@@ -271,7 +338,7 @@ const handleEditProfile = () => {
 .navigation-tabs {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 40px;
+  margin-bottom: 20px;
   gap: 10px;
 }
 
@@ -307,6 +374,81 @@ const handleEditProfile = () => {
 .nav-label {
   font-size: 14px;
   font-weight: 500;
+}
+
+.tab-content {
+  margin-bottom: 20px;
+}
+
+.bookmark-content {
+  width: 100%;
+}
+
+.material-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.material-card {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.material-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12);
+}
+
+.card-content h3 {
+  margin: 0 0 10px;
+  font-size: 1.02rem;
+}
+
+.summary {
+  margin: 0;
+  color: #5d6470;
+  line-height: 1.5;
+  max-height: 3em;
+  overflow: hidden;
+}
+
+.card-footer {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.type-badge {
+  background: rgba(var(--primary-color-rgb, 74, 144, 226), 0.15);
+  color: var(--primary-color);
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.date {
+  color: #7c8593;
+  font-size: 12px;
+}
+
+.empty-state,
+.placeholder-content {
+  border-radius: 14px;
+  border: 1px dashed rgba(0, 0, 0, 0.2);
+  color: #606a77;
+  padding: 24px;
+  text-align: center;
 }
 
 /* 退出登录按钮 */
