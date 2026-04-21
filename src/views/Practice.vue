@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, reactive, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import request from '@/api/request';
 import Player from '@/components/Player.vue';
@@ -116,9 +116,17 @@ const buildFileUrl = (url: string | null | undefined) => {
   return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`;
 };
 
-// 获取素材详情
-const fetchMaterial = async () => {
-  const id = route.params.id;
+const normalizeMaterialData = (material: any) => {
+  if (!material) return material;
+
+  material.image_url = buildFileUrl(material.image_url);
+  material.media_url = buildFileUrl(material.media_url);
+  material.audio_url = material.media_url;
+  return material;
+};
+
+// 获取单个素材详情
+const fetchMaterialDetail = async (id: number) => {
   try {
     const res: any = await request.get(`/materials/${id}`);
     console.log('[fetchMaterial] API响应:', res);
@@ -141,19 +149,51 @@ const fetchMaterial = async () => {
       });
     }
 
-    // 构建完整的文件URL
-    if (res) {
-      res.image_url = buildFileUrl(res.image_url);
-      res.media_url = buildFileUrl(res.media_url);
-
-      // 映射字段名以兼容模板
-      // 模板使用 audio_url，API返回 media_url
-      res.audio_url = res.media_url;
-    }
-
-    practiceList.value = [res]; // 这里为了 TikTok 效果通常是列表，目前先处理单篇
+    return normalizeMaterialData(res);
   } catch (err) {
     console.error("Fetch failed", err);
+    return null;
+  }
+};
+
+// 根据预览页筛选条件获取练习卡片列表（保持当前点击素材置顶）
+const fetchPracticeMaterials = async () => {
+  const currentId = Number(route.params.id);
+  const level = route.query.level as string | undefined;
+  const type = route.query.type as string | undefined;
+
+  if (level && type) {
+    try {
+      const listRes: any = await request.get('/materials', {
+        params: { level, type }
+      });
+
+      const list = Array.isArray(listRes) ? listRes : [];
+      const ids = list
+        .map((item: any) => Number(item?.id))
+        .filter((id: number) => Number.isFinite(id) && id > 0);
+      const orderedIds = currentId
+        ? [currentId, ...ids.filter((id: number) => id !== currentId)]
+        : ids;
+
+      const detailRequests = orderedIds.map((id: number) => fetchMaterialDetail(id));
+      const details = (await Promise.all(detailRequests)).filter(Boolean);
+
+      if (details.length > 0) {
+        practiceList.value = details;
+        return;
+      }
+    } catch (err) {
+      console.error('Fetch materials list failed', err);
+    }
+  }
+
+  // 兜底：没有 query 参数或列表接口失败时，至少显示当前素材
+  if (currentId) {
+    const oneMaterial = await fetchMaterialDetail(currentId);
+    practiceList.value = oneMaterial ? [oneMaterial] : [];
+  } else {
+    practiceList.value = [];
   }
 };
 
@@ -321,7 +361,7 @@ const refresh = async () => {
   // 清除现有答案和结果
   clearAnswers();
   // 重新获取数据
-  await fetchMaterial();
+  await fetchPracticeMaterials();
   console.log('Data fetched', { count: practiceList.value.length });
   // 随机排序（打乱顺序）
   practiceList.value = practiceList.value.slice().sort(() => Math.random() - 0.5);
@@ -385,7 +425,10 @@ const initIntersectionObserver = () => {
 
 // 在获取数据后初始化 observer
 const initAfterFetch = async () => {
-  await fetchMaterial();
+  await fetchPracticeMaterials();
+
+  // 重置激活状态
+  Object.keys(activeCards).forEach(key => delete activeCards[Number(key)]);
 
   // 初始化 activeCards 状态，默认为 false
   practiceList.value.forEach(item => {
@@ -405,6 +448,13 @@ const initAfterFetch = async () => {
 onMounted(() => {
   initAfterFetch();
 });
+
+watch(
+  () => [route.params.id, route.query.level, route.query.type],
+  () => {
+    initAfterFetch();
+  }
+);
 
 onUnmounted(() => {
   if (intersectionObserver) {
