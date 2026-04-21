@@ -231,7 +231,6 @@ GET /api/materials?type=reading&level=B1
     "type": "reading",
     "level": "B1",
     "title": "环境保护的重要性",
-    "content": "回家回家"
     "media_url": null,
     "image_url": "/uploads/image_12345.jpg",
     "created_at": "2026-04-15T10:30:00.000Z"
@@ -241,7 +240,6 @@ GET /api/materials?type=reading&level=B1
     "type": "listening",
     "level": "B1",
     "title": "日常对话练习",
-    "content": "事实是事实"
     "media_url": "/uploads/audio_67890.mp3",
     "image_url": null,
     "created_at": "2026-04-14T15:45:00.000Z"
@@ -419,6 +417,143 @@ GET /api/materials/1
 - **错误响应**:
   - 400: 参数验证失败（materialId非数字，answers格式错误）
   - 500: 服务器内部错误
+
+---
+
+## ⭐ 用户收藏接口
+
+### 1. 添加收藏
+
+**用户收藏某个学习素材**
+
+- **URL**: `/api/favorites/add`
+- **Method**: `POST`
+- **认证**: 需要用户Token
+- **请求体**:
+
+```json
+{
+  "materialId": 1
+}
+```
+
+- **参数说明**:
+  - `materialId`: 素材ID（必须是数字）
+
+- **验证规则**:
+  - 素材必须存在
+  - 不能重复收藏同一素材
+
+- **成功响应** (201):
+
+```json
+{
+  "message": "收藏成功"
+}
+```
+
+- **错误响应**:
+  - 400: 已收藏该素材、参数验证失败
+  - 404: 素材不存在
+  - 500: 服务器内部错误
+
+### 2. 取消收藏
+
+**用户取消收藏某个学习素材**
+
+- **URL**: `/api/favorites/remove`
+- **Method**: `DELETE`
+- **认证**: 需要用户Token
+- **请求体**:
+
+```json
+{
+  "materialId": 1
+}
+```
+
+- **成功响应** (200):
+
+```json
+{
+  "message": "取消收藏成功"
+}
+```
+
+- **错误响应**:
+  - 400: 未收藏该素材
+  - 500: 服务器内部错误
+
+### 3. 获取用户收藏列表
+
+**获取当前用户收藏的所有素材列表**
+
+- **URL**: `/api/favorites`
+- **Method**: `GET`
+- **认证**: 需要用户Token
+
+- **成功响应** (200):
+
+```json
+[
+  {
+    "id": 1,
+    "type": "reading",
+    "level": "B1",
+    "title": "环境保护的重要性",
+    "content": "环境保护是当今社会面临的重要课题...",
+    "media_url": null,
+    "image_url": "/uploads/image_12345.jpg",
+    "created_at": "2026-04-15T10:30:00.000Z",
+    "favorited_at": "2026-04-20T14:56:27.000Z"
+  }
+]
+```
+
+- **字段说明**:
+  - `favorited_at`: 收藏时间
+  - 其他字段同素材列表接口
+
+### 4. 检查收藏状态
+
+**检查用户是否收藏了某个素材**
+
+- **URL**: `/api/favorites/check/:materialId`
+- **Method**: `GET`
+- **认证**: 需要用户Token
+- **路径参数**:
+  - `materialId`: 素材ID（必须是数字）
+
+- **成功响应** (200):
+
+```json
+{
+  "isFavorited": true
+}
+```
+
+### 5. 素材详情新增字段
+
+在素材详情接口（`GET /api/materials/:id`）的响应中新增了 `isFavorited` 字段，表示当前用户是否收藏了该素材。
+
+**示例响应**:
+
+```json
+{
+  "id": 1,
+  "type": "reading",
+  "level": "B1",
+  "title": "环境保护的重要性",
+  "content": "环境保护是当今社会面临的重要课题...",
+  "media_url": null,
+  "image_url": "/uploads/image_12345.jpg",
+  "full_analysis": "本文讨论了环境保护的多个方面...",
+  "created_at": "2026-04-15T10:30:00.000Z",
+  "questions": [ ... ],
+  "lastPractice": "2026-04-10T08:15:00.000Z",
+  "isFavorited": true
+}
+```
 
 ---
 
@@ -946,12 +1081,11 @@ const API_BASE_URL =
 
 ## 📝 更新日志
 
-### 2026-04-20 (文件上传功能)
+### 2026-04-21
 
-- 新增完整的文件上传接口，支持图片和音频文件
-- 按文件类型自动分类存储：图片存入 `uploads/image/`，音频/视频存入 `uploads/media/`
-- 新增文件上传验证：文件类型、大小限制、MIME类型检查
-- 提供管理员文件管理接口：获取文件列表、删除文件
-- 更新前端对接文档，提供完整的文件上传集成示例
+- 新增用户收藏功能，支持添加/取消收藏、获取收藏列表、检查收藏状态
+- 新增收藏接口：`POST /api/favorites/add`, `DELETE /api/favorites/remove`, `GET /api/favorites`, `GET /api/favorites/check/:materialId`
+- 素材详情接口新增 `isFavorited` 字段，表示当前用户是否收藏了该素材
+- 更新接口文档，增加完整的收藏接口说明
 
 ---
