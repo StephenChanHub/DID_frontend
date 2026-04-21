@@ -6,9 +6,10 @@
       <router-view />
     </main>
 
-    <nav v-if="!hideLayout" class="floating-nav">
-      <router-link to="/do" class="nav-item">DO</router-link>
-      <router-link to="/did" class="nav-item">DID</router-link>
+    <nav v-if="!hideLayout" class="floating-nav" ref="navRef">
+      <div class="nav-pill" :style="pillStyle"></div>
+      <router-link to="/do" class="nav-item" ref="navDoRef">DO</router-link>
+      <router-link to="/did" class="nav-item" ref="navDidRef">DID</router-link>
     </nav>
 
     <AuthModal v-if="userStore.showAuthModal" />
@@ -18,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed } from 'vue';
+import { onMounted, watch, computed, ref, nextTick, onUnmounted } from 'vue';
 import { useRoute } from 'vue-router';
 import UserModule from '@/components/UserModule.vue';
 import AuthModal from '@/components/AuthModal.vue';
@@ -34,6 +35,49 @@ const route = useRoute();
 // 判断是否需要隐藏布局（用于练习页面）
 const hideLayout = computed(() => route.meta?.hideLayout === true);
 
+const navRef = ref<HTMLElement | null>(null);
+const navDoRef = ref<any>(null);
+const navDidRef = ref<any>(null);
+
+const pillLeft = ref(0);
+const pillWidth = ref(0);
+const isJellying = ref(false);
+
+const pillStyle = computed(() => ({
+  transform: `translateX(${pillLeft.value}px)`,
+  width: `${pillWidth.value}px`,
+}));
+
+const updatePill = () => {
+  const nav = navRef.value;
+  if (!nav) return;
+  const path = route.path;
+  const targetRef = path.startsWith('/did') ? navDidRef : navDoRef;
+  const el = targetRef.value?.$el || targetRef.value;
+  if (!el) return;
+
+  const navRect = nav.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const pad = 8;
+  const newLeft = elRect.left - navRect.left - pad;
+  const newWidth = elRect.width + pad * 2;
+
+  if (pillWidth.value > 0 && newLeft !== pillLeft.value) {
+    isJellying.value = true;
+    setTimeout(() => { isJellying.value = false; }, 520);
+  }
+
+  pillLeft.value = newLeft;
+  pillWidth.value = newWidth;
+};
+
+watch(() => route.path, () => nextTick(updatePill));
+onMounted(() => {
+  nextTick(updatePill);
+  window.addEventListener('resize', updatePill);
+});
+onUnmounted(() => window.removeEventListener('resize', updatePill));
+
 // 通用的图标生成函数（180x180 兼容性最好）
 const generateAvatarBase64 = (text: string, color: string): string => {
   const canvas = document.createElement('canvas');
@@ -41,7 +85,7 @@ const generateAvatarBase64 = (text: string, color: string): string => {
   canvas.height = 180;
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
-  
+
   // 背景颜色
   ctx.fillStyle = color;
 
@@ -62,7 +106,7 @@ const generateAvatarBase64 = (text: string, color: string): string => {
   ctx.quadraticCurveTo(0, 0, r, 0);
   ctx.closePath();
   ctx.fill();
-  
+
   // 文字
   ctx.fillStyle = '#ffffff';
   // 兼容性修复：Safari 对字体名称比较挑剔，建议加上通用字体族
@@ -70,7 +114,7 @@ const generateAvatarBase64 = (text: string, color: string): string => {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, 90, 90);
-  
+
   return canvas.toDataURL('image/png');
 };
 
@@ -88,11 +132,11 @@ const updateAllIcons = () => {
 
   if (userStore.isLoggedIn) {
     const dataUrl = generateAvatarBase64(userStore.avatarText, themeStore.primaryColor);
-    
+
     // 浏览器标签页
     favIcon.rel = 'icon'; // Safari 有时对 'shortcut icon' 识别不稳，直接用 'icon'
     favIcon.href = dataUrl;
-    
+
     // Apple 主屏幕图标
     appleIcon.rel = 'apple-touch-icon';
     appleIcon.href = dataUrl;
@@ -111,10 +155,10 @@ const updateAllIcons = () => {
 
 // 监控登录状态、昵称文本、主题颜色，任何一个变了都立即更新图标
 watch(
-  [() => userStore.isLoggedIn, () => userStore.avatarText, () => themeStore.primaryColor], 
+  [() => userStore.isLoggedIn, () => userStore.avatarText, () => themeStore.primaryColor],
   () => {
     updateAllIcons();
-  }, 
+  },
   { immediate: true }
 );
 
@@ -171,7 +215,8 @@ body {
 /* --- 主内容区布局 --- */
 .main-view {
   flex: 1;
-  padding: calc(100px + env(safe-area-inset-top)) 20px calc(120px + env(safe-area-inset-bottom)); /* 为上下悬浮组件预留呼吸空间，考虑安全区域 */
+  padding: calc(100px + env(safe-area-inset-top)) 20px calc(120px + env(safe-area-inset-bottom));
+  /* 为上下悬浮组件预留呼吸空间，考虑安全区域 */
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
@@ -192,37 +237,72 @@ body {
   max-width: 360px;
   height: 64px;
 
-  background: rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(10px) saturate(150%);
-    -webkit-backdrop-filter: blur(10px) saturate(150%);
-    border: 0.5px solid rgba(255, 255, 255, 0.4);
-    box-shadow:
-        0 18px 46px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    border-radius: 30px;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.32) 0%,
+      rgba(255, 255, 255, 0.18) 50%,
+      rgba(255, 255, 255, 0.14) 100%);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  border: 1.5px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 18px 52px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18);
+  border-radius: 34px;
 
   display: flex;
   justify-content: space-around;
   align-items: center;
   z-index: 1000;
-  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.nav-pill {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  height: calc(100% - 16px);
+  border-radius: 26px;
+  background: linear-gradient(145deg,
+      rgba(255, 255, 255, 0.52) 0%,
+      rgba(255, 255, 255, 0.28) 55%,
+      rgba(255, 255, 255, 0.22) 100%);
+  border: 1.2px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: transform 0.48s cubic-bezier(0.34, 1.56, 0.64, 1),
+    width 0.48s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 0;
+  pointer-events: none;
+  will-change: transform, width;
+  animation: pill-jelly-idle 0s ease both paused;
+}
+
+.floating-nav:has(.nav-pill) .nav-pill {
+  animation: none;
 }
 
 .nav-item {
+  position: relative;
+  z-index: 1;
   text-decoration: none;
   color: var(--text-color);
-  opacity: 0.6;
+  opacity: 0.5;
   font-weight: 700;
   font-size: 1.1rem;
   letter-spacing: 1px;
-  transition: all 0.3s ease;
+  transition: opacity 0.3s ease, color 0.3s ease, transform 0.3s ease;
+  padding: 8px 18px;
 }
 
 .nav-item.router-link-active {
   color: var(--primary-color);
   opacity: 1;
-  transform: translateY(-2px);
-  text-shadow: 0 0 12px var(--primary-color);
+  text-shadow: 0 0 10px var(--primary-color);
 }
 
 /* --- 页面切换过渡动画 --- */
@@ -241,6 +321,7 @@ body {
   .main-view {
     padding-top: calc(80px + env(safe-area-inset-top));
   }
+
   .floating-nav {
     width: 92%;
     bottom: calc(20px + env(safe-area-inset-bottom));

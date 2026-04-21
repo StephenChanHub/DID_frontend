@@ -98,11 +98,34 @@ const handleEditProfile = () => {
   position: fixed;
   top: calc(25px + env(safe-area-inset-top));
   right: calc(25px + env(safe-area-inset-right));
-  font-size: 24px;
+  font-size: 40px;
   background: none;
   border: none;
   cursor: pointer;
   z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+  will-change: transform;
+}
+
+.settings-btn:hover {
+  animation: settings-pop-spin 1s ease;
+}
+
+@keyframes settings-pop-spin {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+
+  18% {
+    transform: scale(1.14) rotate(0deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
 }
 
 /* 未登录状态 */
@@ -206,8 +229,8 @@ const handleEditProfile = () => {
   justify-content: space-between;
   margin-bottom: 30px;
   padding: 15px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  /* border-top: 1px solid rgba(0, 0, 0, 0.1); */
+  /* border-bottom: 1px solid rgba(0, 0, 0, 0.1); */
 }
 
 .edit-btn {

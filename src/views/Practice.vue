@@ -3,12 +3,8 @@
     <div class="main-scroller" ref="scroller">
       <div v-for="(item, index) in practiceList" :key="item.id" class="practice-slide" :data-material-id="item.id">
         <div class="practice-card">
-          <button
-            class="favorite-btn"
-            :class="{ 'active': favoriteCards[item.id] }"
-            @click="toggleFavorite(item.id)"
-            :title="favoriteCards[item.id] ? '已收藏' : '收藏'"
-          >
+          <button class="favorite-btn" :class="{ 'active': favoriteCards[item.id] }" @click="toggleFavorite(item.id)"
+            :title="favoriteCards[item.id] ? '已收藏' : '收藏'">
             {{ favoriteCards[item.id] ? '★' : '☆' }}
           </button>
           <div class="media-container">
@@ -32,42 +28,25 @@
               </p>
 
               <div v-if="q.q_type === 'choice'" class="options-grid">
-                <button
-                  v-for="opt in q.options"
-                  :key="opt"
-                  :class="[
-                    'opt-btn',
-                    { active: userAnswers[q.id] === opt.charAt(0) },
-                    getOptionClass(q, opt)
-                  ]"
-                  @click="!showResult && (userAnswers[q.id] = opt.charAt(0))"
-                  :disabled="showResult"
-                >
+                <button v-for="opt in q.options" :key="opt" :class="[
+                  'opt-btn',
+                  { active: userAnswers[q.id] === opt.charAt(0) },
+                  getOptionClass(q, opt)
+                ]" @click="!showResult && (userAnswers[q.id] = opt.charAt(0))" :disabled="showResult">
                   {{ opt }}
                 </button>
               </div>
 
               <div v-else-if="q.q_type === 'bool'" class="options-grid binary">
-                <button
-                  :class="['opt-btn', { active: userAnswers[q.id] === 'T' }, getOptionClass(q, 'T')]"
-                  @click="!showResult && (userAnswers[q.id] = 'T')"
-                  :disabled="showResult"
-                >T</button>
-                <button
-                  :class="['opt-btn', { active: userAnswers[q.id] === 'F' }, getOptionClass(q, 'F')]"
-                  @click="!showResult && (userAnswers[q.id] = 'F')"
-                  :disabled="showResult"
-                >F</button>
+                <button :class="['opt-btn', { active: userAnswers[q.id] === 'T' }, getOptionClass(q, 'T')]"
+                  @click="!showResult && (userAnswers[q.id] = 'T')" :disabled="showResult">T</button>
+                <button :class="['opt-btn', { active: userAnswers[q.id] === 'F' }, getOptionClass(q, 'F')]"
+                  @click="!showResult && (userAnswers[q.id] = 'F')" :disabled="showResult">F</button>
               </div>
 
               <div v-else-if="q.q_type === 'fill'" class="fill-input-wrapper">
-                <input
-                  v-model="userAnswers[q.id]"
-                  type="text"
-                  placeholder="Input your answer here..."
-                  class="fill-input"
-                  :disabled="showResult"
-                />
+                <input v-model="userAnswers[q.id]" type="text" placeholder="Input your answer here..."
+                  class="fill-input" :disabled="showResult" />
                 <div v-if="showResult && answerResults[q.id]" class="fill-correct-answer">
                   正确答案: {{ getCorrectAnswer(q) }}
                 </div>
@@ -78,7 +57,8 @@
                   ✓ 正确！你的答案: {{ formatAnswerDisplay(q, userAnswers[q.id]) }}
                 </div>
                 <div v-else class="feedback-content">
-                  ✗ 错误！正确答案: {{ formatAnswerDisplay(q, getCorrectAnswer(q)) }}，你的答案: {{ formatAnswerDisplay(q, userAnswers[q.id]) }}
+                  ✗ 错误！正确答案: {{ formatAnswerDisplay(q, getCorrectAnswer(q)) }}，你的答案: {{ formatAnswerDisplay(q,
+                    userAnswers[q.id]) }}
                 </div>
               </div>
             </div>
@@ -94,10 +74,10 @@
 
     <aside class="side-controls">
       <div class="nav-btns">
-        <button @click="scrollPrev" class="side-btn">▲</button>
-        <button @click="scrollNext" class="side-btn">▼</button>
+        <button @click="scrollPrev" class="side-btn">⬆️</button>
+        <button @click="scrollNext" class="side-btn">⬇️</button>
       </div>
-      <button @click="goBack" class="side-btn back-btn">↩</button>
+      <button @click="goBack" class="side-btn back-btn">↩️</button>
       <button @click="refresh" class="side-btn refresh-btn">🔄</button>
     </aside>
   </div>
@@ -435,7 +415,8 @@ onUnmounted(() => {
 <style scoped>
 .practice-wrapper {
   display: flex;
-  height: 100vh; /* 全屏高度 */
+  height: 100vh;
+  /* 全屏高度 */
   width: 100%;
   gap: 0;
   position: relative;
@@ -445,33 +426,45 @@ onUnmounted(() => {
 
 /* TikTok 滚动核心 */
 .main-scroller {
-  flex: 0 0 100%; /* 占满宽度，右侧按钮悬浮其上 */
+  flex: 0 0 100%;
+  /* 占满宽度，右侧按钮悬浮其上 */
   height: 100%;
   overflow-y: scroll;
-  scroll-snap-type: y mandatory; /* 开启捕捉 */
+  scroll-snap-type: y mandatory;
+  /* 开启捕捉 */
   border-radius: 30px;
-  scrollbar-width: none; /* 隐藏滚动条 */
+  scrollbar-width: none;
+  /* 隐藏滚动条 */
 }
-.main-scroller::-webkit-scrollbar { display: none; }
+
+.main-scroller::-webkit-scrollbar {
+  display: none;
+}
 
 .practice-slide {
   height: 100%;
   width: 100%;
-  scroll-snap-align: start; /* 每次滚动停在卡片开头 */
+  scroll-snap-align: start;
+  /* 每次滚动停在卡片开头 */
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
 .practice-card {
-  width: 90vw;
+  width: 80vw;
   height: 80vh;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 24px;
-  box-shadow: 5px 10px 5px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0.22) 100%);
+  backdrop-filter: blur(18px) saturate(155%);
+  -webkit-backdrop-filter: blur(18px) saturate(155%);
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    5px 10px 5px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18);
   border-radius: 36px;
   padding: 15px;
   overflow-y: auto;
@@ -479,8 +472,10 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 20px;
   transition: transform 0.3s, box-shadow 0.3s;
-  position: relative; /* 为收藏按钮提供相对定位上下文 */
+  position: relative;
+  /* 为收藏按钮提供相对定位上下文 */
 }
+
 .practice-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
@@ -506,7 +501,8 @@ onUnmounted(() => {
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
-  color: var(--primary-color); /* 使用主题主色调 */
+  color: var(--primary-color);
+  /* 使用主题主色调 */
   z-index: 10;
 }
 
@@ -518,104 +514,172 @@ onUnmounted(() => {
 
 .favorite-btn.active {
   color: var(--primary-color);
-  filter: brightness(1.2); /* 激活状态更亮 */
+  filter: brightness(1.2);
+  /* 激活状态更亮 */
   text-shadow: 0 0 8px var(--primary-color);
 }
 
 /* Media 容器 */
 .media-container {
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0px 15px 30px rgba(0, 0, 0, 0.2);
-    border: #e9e9e9 solid 1px;
+  position: relative;
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0.18) 52%,
+      rgba(255, 255, 255, 0.14) 100%);
+  box-shadow:
+    0 16px 40px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.2);
+  border: 1.5px solid rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(22px) saturate(165%);
+  -webkit-backdrop-filter: blur(22px) saturate(165%);
   display: flex;
   flex-direction: column;
   width: 100%;
   max-width: 800px;
-  max-height: 50vh; /* 最大高度为视口的40% */
-  min-height: 400px; /* 最小高度保证可见性 */
-  aspect-ratio: 4/3; /* 保持 4:3 的宽高比 */
+  max-height: 50vh;
+  /* 最大高度为视口的40% */
+  min-height: 400px;
+  /* 最小高度保证可见性 */
+  aspect-ratio: 4/3;
+  /* 保持 4:3 的宽高比 */
   margin: -10px auto;
   gap: 0;
   border-radius: 30px;
   overflow: hidden;
 }
 
+.media-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.02) 100%),
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.34) 0%, transparent 42%);
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Image 模块 */
+.image-box,
+.player {
+  position: relative;
+  z-index: 2;
+}
+
 .image-box {
   width: 100%;
-  flex: 7 0 0%; /* 占 7 份，不收缩，基础尺寸为0% */
+  flex: 7 0 0%;
+  /* 占 7 份，不收缩，基础尺寸为0% */
   border-radius: 30px 30px 0 0;
   overflow: hidden;
-  background: rgba(0,0,0,0.05);
+  background: rgba(255, 255, 255, 0.08);
 }
-.image-box img { width: 100%; height: 100%; object-fit: cover; }
 
-.title { font-size: 2rem; color: #000; text-align: center; }
-.article-body { line-height: 1.8; font-size: 1.1rem; white-space: pre-wrap; opacity: 0.9; }
+.image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.title {
+  font-size: 2rem;
+  color: #000;
+  text-align: center;
+}
+
+.article-body {
+  line-height: 1.8;
+  font-size: 1.1rem;
+  white-space: pre-wrap;
+  opacity: 0.9;
+}
 
 
 .player {
   width: 100%;
-  flex: 3 0 0%; /* 占 3 份，不收缩，基础尺寸为0% */
+  flex: 3 0 0%;
+  /* 占 3 份，不收缩，基础尺寸为0% */
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.1); /* 添加轻微背景让播放器更可见 */
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  background: linear-gradient(180deg,
+      rgba(255, 255, 255, 0.1) 0%,
+      rgba(255, 255, 255, 0.16) 100%);
+  /* 添加轻微背景让播放器更可见 */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 0 0 30px 30px;
 }
 
 
-.content-section { margin-top: 20px;}
+.content-section {
+  margin-top: 20px;
+}
 
 
 /* 题目样式 */
 .question-item {
-  background: rgba(255,255,255,0.3);
+  background: rgba(255, 255, 255, 0.3);
   padding: 20px;
   border-radius: 20px;
   margin-bottom: 20px;
   color: var(--primary-color);
 }
-.q-stem { font-weight: 600; margin-bottom: 15px; }
-.q-no { color: var(--primary-color); margin-right: 8px; }
 
-.options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.options-grid.binary { grid-template-columns: 1fr 1fr; }
+.q-stem {
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.q-no {
+  color: var(--primary-color);
+  margin-right: 8px;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.options-grid.binary {
+  grid-template-columns: 1fr 1fr;
+}
 
 
 .opt-btn {
   padding: 3vh;
   border: 1px solid var(--glass-border);
-  background: rgba(255,255,255,0.5);
+  background: rgba(255, 255, 255, 0.5);
   border-radius: 30px;
   cursor: pointer;
   transition: 0.3s;
   box-shadow: 5px 10px 10px rgba(0, 0, 0, 0.1);
-  
+
 }
 
 .opt-btn.active {
-    transform: translateY(-5px);
-    box-shadow: 5px 10px 10px rgba(0, 0, 0, 0.5);
-    background: black;
-    color: #fff;
-    border-color: var(--primary-color);
+  transform: translateY(-5px);
+  box-shadow: 5px 10px 10px rgba(0, 0, 0, 0.5);
+  background: black;
+  color: #fff;
+  border-color: var(--primary-color);
 }
 
 /* 正确答案样式 */
 .opt-btn.option-correct {
-    background: #42b983 !important;
-    color: white !important;
-    border-color: #42b983 !important;
+  background: #42b983 !important;
+  color: white !important;
+  border-color: #42b983 !important;
 }
 
 /* 用户选择的错误选项样式 */
 .opt-btn.option-wrong {
-    background: #ff4d4f !important;
-    color: white !important;
-    border-color: #ff4d4f !important;
+  background: #ff4d4f !important;
+  color: white !important;
+  border-color: #ff4d4f !important;
 }
 
 .fill-input {
@@ -629,6 +693,7 @@ onUnmounted(() => {
   outline: none;
   font-size: 1rem;
 }
+
 .fill-input:focus {
   border-bottom-color: var(--primary-color);
 }
@@ -638,8 +703,7 @@ onUnmounted(() => {
   margin-top: 10px;
   padding: 8px 12px;
   background-color: rgba(66, 185, 131, 0.1);
-  color: #42b983;
-  border-left: 3px solid #42b983;
+  color: green;
   border-radius: 6px;
   font-size: 0.9rem;
 }
@@ -651,16 +715,19 @@ onUnmounted(() => {
   font-size: 0.95rem;
   line-height: 1.5;
 }
+
 .feedback-tag.correct {
-  color: #42b983;
+  color: green;
   background-color: rgba(66, 185, 131, 0.1);
-  border-left: 4px solid #42b983;
+
 }
+
 .feedback-tag.wrong {
-  color: #ff4d4f;
+  color: red;
   background-color: rgba(255, 77, 79, 0.1);
-  border-left: 4px solid #ff4d4f;
+
 }
+
 .feedback-content {
   display: flex;
   flex-direction: column;
@@ -668,15 +735,33 @@ onUnmounted(() => {
 }
 
 /* 底部按钮 */
-.action-footer { 
-    height: 5vh;
-    
-display: flex; gap: 15px; margin-top: auto; }
-.btn-clear, .btn-submit {
-  flex: 1; padding: 15px; border: none; border-radius: 15px; cursor: pointer; font-weight: bold;
+.action-footer {
+  height: 5vh;
+
+  display: flex;
+  gap: 15px;
+  margin-top: auto;
 }
-.btn-clear { background: rgba(0,0,0,0.05); }
-.btn-submit { background: var(--primary-color); color: #fff; box-shadow: 0 8px 20px var(--shadow-color); }
+
+.btn-clear,
+.btn-submit {
+  flex: 1;
+  padding: 15px;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-clear {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.btn-submit {
+  background: var(--primary-color);
+  color: #fff;
+  box-shadow: 0 8px 20px var(--shadow-color);
+}
 
 
 .side-controls {
@@ -689,6 +774,7 @@ display: flex; gap: 15px; margin-top: auto; }
   gap: 12px;
   z-index: 100;
 }
+
 .side-btn {
   width: 50px;
   height: 50px;
@@ -707,15 +793,23 @@ display: flex; gap: 15px; margin-top: auto; }
   color: #555;
   font-size: 1.2rem;
 }
+
 .side-btn:hover {
   background: rgba(255, 255, 255, 0.5);
   transform: scale(1.05);
 }
-.nav-btns { display: flex; flex-direction: column; gap: 10px; }
+
+.nav-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .back-btn {
   background: rgba(255, 255, 255, 0.3);
   color: #555;
 }
+
 .back-btn:hover {
   background: rgba(255, 255, 255, 0.5);
 }
@@ -728,24 +822,29 @@ display: flex; gap: 15px; margin-top: auto; }
   }
 
   .main-scroller {
-    flex: 0 0 100%; /* 移动端占满宽度 */
+    flex: 0 0 100%;
+    /* 移动端占满宽度 */
   }
 
   .practice-card {
-    height: 650px; /* 移动端适当减小高度 */
+    height: 650px;
+    /* 移动端适当减小高度 */
     padding: 10px 0px;
     border-radius: 36px;
     padding: 10px 10px;
   }
 
   .media-container {
-    max-height: 30vh; /* 移动端最大高度为视口的30% */
-    min-height: 300px; /* 移动端最小高度 */
-    aspect-ratio: 4/3; /* 保持 4:3 的宽高比 */
+    max-height: 30vh;
+    /* 移动端最大高度为视口的30% */
+    min-height: 300px;
+    /* 移动端最小高度 */
+    aspect-ratio: 4/3;
+    /* 保持 4:3 的宽高比 */
     max-width: 100%;
     padding: 0px 2px;
     margin: 0 auto;
-    
+
   }
 
   .image-box {
@@ -762,21 +861,22 @@ display: flex; gap: 15px; margin-top: auto; }
     color: #000;
   }
 
- 
+
   .opt-btn {
     color: #000;
   }
 
-  
+
 
   /* 聚焦时效果（可选） */
-.fill-input:focus {
-  border-bottom-color: var(--primary-color);
-  box-shadow: none;
-}
+  .fill-input:focus {
+    border-bottom-color: var(--primary-color);
+    box-shadow: none;
+  }
 
   .practice-slide {
-    align-items: flex-start; /* 移动端卡片顶部对齐 */
+    align-items: flex-start;
+    /* 移动端卡片顶部对齐 */
     padding-top: 20px;
   }
 
@@ -794,7 +894,8 @@ display: flex; gap: 15px; margin-top: auto; }
   /* 移动端收藏按钮 */
   .favorite-btn {
     top: 30px;
-    right: 30px; /* 向左偏移10px */
+    right: 30px;
+    /* 向左偏移10px */
     width: 40px;
     height: 40px;
     font-size: 1.2rem;
