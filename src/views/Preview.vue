@@ -116,7 +116,13 @@ const changeLevel = (lv: string) => {
 };
 
 const goToDetail = (id: number) => {
-    router.push(`/practice/${id}`);
+    router.push({
+        path: `/practice/${id}`,
+        query: {
+            level: currentLevel.value,
+            type: type.value
+        }
+    });
 };
 
 const formatDate = (dateStr: string) => {
