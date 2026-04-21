@@ -28,7 +28,7 @@
 
       <div class="controls-area">
         <button class="ctrl-btn skip-btn" @click="skip(-5)">
-          <span class="icon">↺ 5s</span>
+          <span class="icon"><< 5s</span>
         </button>
 
         <button class="ctrl-btn play-btn" @click="togglePlay">
@@ -36,7 +36,7 @@
         </button>
 
         <button class="ctrl-btn skip-btn" @click="skip(5)">
-          <span class="icon">5s ↻</span>
+          <span class="icon">5s >></span>
         </button>
       </div>
     </div>

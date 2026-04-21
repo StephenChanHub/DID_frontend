@@ -37,7 +37,7 @@
                     <div class="card-content">
                         <h3>{{ item.title }}</h3>
                         <p class="summary">
-                            {{ item.title }} 的相关练习内容，点击进入详细学习界面进行深度训练。
+                            {{ item.content }}
                         </p>
                     </div>
                     <div class="card-footer">
@@ -187,11 +187,11 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
 .level-item {
     width: 50px;
     height: 50px;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 0.5px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 0.5px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     border-radius: 15px;
     display: flex;
     align-items: center;

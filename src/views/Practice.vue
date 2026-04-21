@@ -48,16 +48,16 @@
                 <input v-model="userAnswers[q.id]" type="text" placeholder="Input your answer here..."
                   class="fill-input" :disabled="showResult" />
                 <div v-if="showResult && answerResults[q.id]" class="fill-correct-answer">
-                  正确答案: {{ getCorrectAnswer(q) }}
+                  correct Answer : {{ getCorrectAnswer(q) }}
                 </div>
               </div>
 
               <div v-if="showResult" class="feedback-tag" :class="isAnswerCorrect(q) ? 'correct' : 'wrong'">
                 <div v-if="isAnswerCorrect(q)" class="feedback-content">
-                  ✓ 正确！你的答案: {{ formatAnswerDisplay(q, userAnswers[q.id]) }}
+                  ✅<!--  perfect！: {{ formatAnswerDisplay(q, userAnswers[q.id]) }} -->
                 </div>
                 <div v-else class="feedback-content">
-                  ✗ 错误！正确答案: {{ formatAnswerDisplay(q, getCorrectAnswer(q)) }}，你的答案: {{ formatAnswerDisplay(q,
+                  correct Answer : {{ formatAnswerDisplay(q, getCorrectAnswer(q)) }}，Your answer: {{ formatAnswerDisplay(q,
                     userAnswers[q.id]) }}
                 </div>
               </div>
@@ -77,8 +77,9 @@
         <button @click="scrollPrev" class="side-btn">⬆️</button>
         <button @click="scrollNext" class="side-btn">⬇️</button>
       </div>
-      <button @click="goBack" class="side-btn back-btn">↩️</button>
+      
       <button @click="refresh" class="side-btn refresh-btn">🔄</button>
+      <button @click="goBack" class="side-btn back-btn">↩️</button>
     </aside>
   </div>
 </template>
@@ -768,17 +769,17 @@ onUnmounted(() => {
   position: fixed;
   right: 10px;
   top: 50%;
-  transform: translateY(-10%);
+  /* transform: translateY(-10%); */
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   z-index: 100;
 }
 
 .side-btn {
-  width: 50px;
-  height: 50px;
-  background: rgba(255, 255, 255, 0.3);
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 0.5px solid rgba(255, 255, 255, 0.3);
@@ -791,7 +792,7 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.3s;
   color: #555;
-  font-size: 1.2rem;
+  font-size: 2rem;
 }
 
 .side-btn:hover {
@@ -882,13 +883,13 @@ onUnmounted(() => {
 
   .side-controls {
     right: 10px;
-    transform: translateY(30%);
+    transform: translateY(-20%);
   }
 
   .side-btn {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
+    width: 50px;
+    height: 50px;
+    font-size: 1.5rem;
   }
 
   /* 移动端收藏按钮 */

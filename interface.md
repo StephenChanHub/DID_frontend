@@ -231,6 +231,7 @@ GET /api/materials?type=reading&level=B1
     "type": "reading",
     "level": "B1",
     "title": "环境保护的重要性",
+    "content": "回家回家"
     "media_url": null,
     "image_url": "/uploads/image_12345.jpg",
     "created_at": "2026-04-15T10:30:00.000Z"
@@ -240,6 +241,7 @@ GET /api/materials?type=reading&level=B1
     "type": "listening",
     "level": "B1",
     "title": "日常对话练习",
+    "content": "事实是事实"
     "media_url": "/uploads/audio_67890.mp3",
     "image_url": null,
     "created_at": "2026-04-14T15:45:00.000Z"

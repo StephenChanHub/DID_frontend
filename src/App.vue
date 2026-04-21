@@ -58,7 +58,7 @@ const updatePill = () => {
 
   const navRect = nav.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
-  const pad = 8;
+  const pad = 25;
   const newLeft = elRect.left - navRect.left - pad;
   const newWidth = elRect.width + pad * 2;
 
@@ -189,6 +189,7 @@ onMounted(() => themeStore.applyTheme());
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -233,8 +234,8 @@ body {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  width: 80%;
-  max-width: 360px;
+  width: 60%;
+  max-width: 300px;
   height: 64px;
 
   background: linear-gradient(135deg,
@@ -262,6 +263,7 @@ body {
   top: 8px;
   left: 0;
   height: calc(100% - 16px);
+  width: 100px;
   border-radius: 26px;
   background: linear-gradient(145deg,
       rgba(255, 255, 255, 0.52) 0%,
@@ -274,8 +276,8 @@ body {
     inset 0 -0.5px 0 rgba(255, 255, 255, 0.22);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: transform 0.48s cubic-bezier(0.34, 1.56, 0.64, 1),
-    width 0.48s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1),
+    width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 0;
   pointer-events: none;
   will-change: transform, width;
@@ -297,6 +299,12 @@ body {
   letter-spacing: 1px;
   transition: opacity 0.3s ease, color 0.3s ease, transform 0.3s ease;
   padding: 8px 18px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-item:active {
+  opacity: 0.8;
+  transform: scale(0.98);
 }
 
 .nav-item.router-link-active {
