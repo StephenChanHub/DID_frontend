@@ -58,9 +58,10 @@ const updatePill = () => {
 
   const navRect = nav.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
-  const pad = 25;
+  const pad = 40;
   const newLeft = elRect.left - navRect.left - pad;
-  const newWidth = elRect.width + pad * 2;
+  const newWidth = elRect.width + pad * 1.5;
+  
 
   if (pillWidth.value > 0 && newLeft !== pillLeft.value) {
     isJellying.value = true;
@@ -235,20 +236,20 @@ body {
   left: 50%;
   transform: translateX(-50%);
   width: 60%;
-  max-width: 300px;
+  max-width: 500px;
   height: 64px;
 
   background: linear-gradient(135deg,
       rgba(255, 255, 255, 0.32) 0%,
       rgba(255, 255, 255, 0.18) 50%,
       rgba(255, 255, 255, 0.14) 100%);
-  backdrop-filter: blur(24px) saturate(170%);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
-  border: 1.5px solid rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(15px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.42);
   box-shadow:
     0 18px 52px rgba(0, 0, 0, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.5);
   border-radius: 34px;
 
   display: flex;
@@ -269,15 +270,15 @@ body {
       rgba(255, 255, 255, 0.52) 0%,
       rgba(255, 255, 255, 0.28) 55%,
       rgba(255, 255, 255, 0.22) 100%);
-  border: 1.2px solid rgba(255, 255, 255, 0.55);
+  border: 0.5px solid rgba(255, 255, 255, 0.55);
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    inset 0 -0.5px 0 rgba(255, 255, 255, 0.22);
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.2);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: transform 1s cubic-bezier(0.34, 1.56, 0.64, 1),
-    width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1),
+    width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
   z-index: 0;
   pointer-events: none;
   will-change: transform, width;
@@ -331,7 +332,7 @@ body {
   }
 
   .floating-nav {
-    width: 92%;
+    width: 80%;
     bottom: calc(20px + env(safe-area-inset-bottom));
   }
 }

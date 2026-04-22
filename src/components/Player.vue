@@ -156,8 +156,8 @@ onUnmounted(() => {
 
 .time-label {
   font-size: 15px;
-  color: var(--text-color);
-  opacity: 0.7;
+  color: black;
+  /* opacity: 0.7; */
   min-width: 40px;
 }
 
@@ -165,7 +165,7 @@ onUnmounted(() => {
 .progress-bar-container {
   flex: 1;
   height: 6px;
-  background: rgba(0,0,0,0.1);
+  background: rgba(255, 255, 255, 0.8);
   border-radius: 3px;
   position: relative;
   cursor: pointer;
@@ -208,7 +208,7 @@ onUnmounted(() => {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-color);
+  color: black;
   transition: all 0.2s;
   display: flex;
   align-items: center;
@@ -221,7 +221,7 @@ onUnmounted(() => {
 bottom: 10px;
   font-size: 14px;
   font-weight: bold;
-  opacity: 0.6;
+  /* opacity: 0.6; */
 }
 
 .skip-btn:hover {

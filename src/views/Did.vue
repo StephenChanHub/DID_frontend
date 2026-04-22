@@ -15,10 +15,13 @@
           <div class="avatar-large">{{ userStore.avatarText }}</div>
         </div>
         <div class="profile-info">
-          <h2 class="nickname">{{ userStore.nickname }}</h2>
+          <div class="nickname-row">
+            <h2 class="nickname">{{ userStore.nickname }}</h2>
+            <button class="logout-btn-header" @click="handleLogout">退出</button>
+          </div>
           <div class="level-coin-row">
             <span class="level-tag">LV: {{ userStore.level }}</span>
-            <img src="/logo.png" alt="Coin" class="coin">
+            <img src="/coin.png" alt="Coin" class="coin">
             <span class="points-tag">{{ userStore.points }}</span>
           </div>
         </div>
@@ -35,16 +38,16 @@
 
       <!-- 第三行：导航栏 -->
       <div class="navigation-tabs">
-        <div class="nav-item" :class="{ active: activeTab === 'bookmark' }" @click="switchTab('bookmark')">
-          <span class="nav-icon">📚</span>
+        <div class="did-nav-item" :class="{ active: activeTab === 'bookmark' }" @click="switchTab('bookmark')">
+          <!-- <span class="nav-icon">📚</span> -->
           <span class="nav-label">Bookmark</span>
         </div>
-        <div class="nav-item" :class="{ active: activeTab === 'bag' }" @click="switchTab('bag')">
-          <span class="nav-icon">🎒</span>
+        <div class="did-nav-item" :class="{ active: activeTab === 'bag' }" @click="switchTab('bag')">
+          <!-- <span class="nav-icon">🎒</span> -->
           <span class="nav-label">Bag</span>
         </div>
-        <div class="nav-item" :class="{ active: activeTab === 'albums' }" @click="switchTab('albums')">
-          <span class="nav-icon">📁</span>
+        <div class="did-nav-item" :class="{ active: activeTab === 'albums' }" @click="switchTab('albums')">
+          <!-- <span class="nav-icon">📁</span> -->
           <span class="nav-label">Albums</span>
         </div>
       </div>
@@ -74,8 +77,6 @@
         </div>
       </div>
 
-      <!-- 退出登录按钮 -->
-      <button class="logout-btn" @click="handleLogout">退出登录</button>
     </div>
   </div>
 </template>
@@ -253,8 +254,16 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
 .profile-info {
   flex: 1;
   display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.nickname-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
 }
 
 .nickname {
@@ -342,7 +351,7 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   gap: 10px;
 }
 
-.nav-item {
+.did-nav-item {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -351,25 +360,32 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.2s;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
-.nav-item:hover {
-  background: rgba(var(--primary-color-rgb, 74, 144, 226), 0.05);
+.did-nav-item:hover {
+  /* background: var(--primary-color); */
+  /* color: white; */
   transform: translateY(-2px);
+  border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.nav-item.active {
+.did-nav-item.active {
   background: var(--primary-color);
   color: white;
   border-color: var(--primary-color);
+  box-shadow: 0 4px 12px rgba(var(--primary-color-rgb, 74, 144, 226), 0.3);
 }
 
-.nav-icon {
+
+
+/* .nav-icon {
   font-size: 24px;
   margin-bottom: 8px;
-}
+} */
 
 .nav-label {
   font-size: 14px;
@@ -452,23 +468,25 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
 }
 
 /* 退出登录按钮 */
-.logout-btn {
-  width: 100%;
-  margin-top: 20px;
+.logout-btn-header {
   color: var(--primary-color);
   border: 1px solid var(--primary-color);
   background: none;
-  padding: 12px 20px;
-  border-radius: 25px;
+  padding: 6px 16px;
+  border-radius: 20px;
   cursor: pointer;
   font-weight: 500;
+  font-size: 14px;
   transition: all 0.2s;
+  flex-shrink: 0;
+  margin-left: 10px;
 }
 
-.logout-btn:hover {
+.logout-btn-header:hover {
   background: var(--primary-color);
   color: white;
 }
+
 
 /* 响应式设计 */
 @media (max-width: 768px) {
@@ -501,6 +519,19 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   .nav-label {
     font-size: 12px;
   }
+
+  .nickname-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logout-btn-header {
+    margin-left: 0;
+    padding: 8px 20px;
+    width: 100%;
+    max-width: 200px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -531,7 +562,40 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   }
 
   .navigation-tabs {
+    flex-direction: row;
+    gap: 8px;
+  }
+
+  .nav-item {
+    flex: 1;
+    padding: 12px 8px;
+    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  }
+
+  .nav-icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  .nav-label {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .nickname-row {
     flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logout-btn-header {
+    margin-left: 0;
+    padding: 8px 20px;
+    width: 100%;
+    max-width: 200px;
   }
 }
 </style>

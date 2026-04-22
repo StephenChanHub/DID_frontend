@@ -233,6 +233,8 @@ GET /api/materials?type=reading&level=B1
     "title": "环境保护的重要性",
     "media_url": null,
     "image_url": "/uploads/image_12345.jpg",
+    "country": "",
+    "topic": "",
     "created_at": "2026-04-15T10:30:00.000Z"
   },
   {
@@ -242,6 +244,8 @@ GET /api/materials?type=reading&level=B1
     "title": "日常对话练习",
     "media_url": "/uploads/audio_67890.mp3",
     "image_url": null,
+    "country": "",
+    "topic": "",
     "created_at": "2026-04-14T15:45:00.000Z"
   }
 ]
@@ -274,6 +278,8 @@ GET /api/materials/1
   "content": "环境保护是当今社会面临的重要课题...",
   "media_url": null,
   "image_url": "/uploads/image_12345.jpg",
+  "country": "",
+  "topic": "",
   "full_analysis": "本文讨论了环境保护的多个方面...",
   "created_at": "2026-04-15T10:30:00.000Z",
   "questions": [
@@ -504,6 +510,8 @@ GET /api/materials/1
     "content": "环境保护是当今社会面临的重要课题...",
     "media_url": null,
     "image_url": "/uploads/image_12345.jpg",
+    "country": "",
+    "topic": "",
     "created_at": "2026-04-15T10:30:00.000Z",
     "favorited_at": "2026-04-20T14:56:27.000Z"
   }
@@ -547,6 +555,8 @@ GET /api/materials/1
   "content": "环境保护是当今社会面临的重要课题...",
   "media_url": null,
   "image_url": "/uploads/image_12345.jpg",
+  "country": "",
+  "topic": "",
   "full_analysis": "本文讨论了环境保护的多个方面...",
   "created_at": "2026-04-15T10:30:00.000Z",
   "questions": [ ... ],
@@ -637,7 +647,9 @@ GET /api/materials/1
   "content": "素材正文内容...",
   "full_analysis": "完整解析内容...",
   "media_url": "/uploads/audio_123.mp3", // 可选
-  "image_url": "/uploads/image_456.jpg" // 可选
+  "image_url": "/uploads/image_456.jpg", // 可选
+  "country": "", // 可选，国家/地区
+  "topic": "" // 可选，主题分类
 }
 ```
 
@@ -649,6 +661,8 @@ GET /api/materials/1
   - `full_analysis`: 完整解析（可选）
   - `media_url`: 音频文件URL（听力素材需要）
   - `image_url`: 图片文件URL（可选）
+  - `country`: 国家/地区，不超过255字符（可选）
+  - `topic`: 主题分类，不超过255字符（可选）
 
 - **成功响应** (201):
 
@@ -730,7 +744,9 @@ GET /api/materials/1
   "content": "更新后的素材正文内容...",      // 可选，素材正文
   "full_analysis": "更新后的完整解析...",    // 可选，完整解析
   "media_url": "/uploads/updated_audio.mp3", // 可选，音频文件URL
-  "image_url": "/uploads/updated_image.jpg"  // 可选，图片文件URL
+  "image_url": "/uploads/updated_image.jpg",  // 可选，图片文件URL
+  "country": "",  // 可选，国家/地区
+  "topic": "",  // 可选，主题分类
 }
 ````
 
@@ -1081,11 +1097,11 @@ const API_BASE_URL =
 
 ## 📝 更新日志
 
-### 2026-04-21
+### 2026-04-22
 
-- 新增用户收藏功能，支持添加/取消收藏、获取收藏列表、检查收藏状态
-- 新增收藏接口：`POST /api/favorites/add`, `DELETE /api/favorites/remove`, `GET /api/favorites`, `GET /api/favorites/check/:materialId`
-- 素材详情接口新增 `isFavorited` 字段，表示当前用户是否收藏了该素材
-- 更新接口文档，增加完整的收藏接口说明
+- 素材表新增 `country`（国家/地区）和 `topic`（主题分类）字段，VARCHAR(255)，默认为空
+- 素材列表、素材详情、收藏列表接口响应新增 `country` 和 `topic` 字段
+- 创建素材和更新素材接口支持 `country` 和 `topic` 可选参数
+- 更新接口文档，完善素材相关字段说明
 
 ---

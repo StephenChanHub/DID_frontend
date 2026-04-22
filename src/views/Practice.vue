@@ -89,6 +89,7 @@ import { ref, onMounted, reactive, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import request from '@/api/request';
 import Player from '@/components/Player.vue';
+import { buildFileUrl } from '@/config/env';
 const router = useRouter();
 const route = useRoute();
 const scroller = ref<HTMLElement | null>(null);
@@ -101,20 +102,7 @@ const showResult = ref(false);
 const favoriteCards = reactive<Record<number, boolean>>({}); // 存储收藏状态
 const answerResults = ref<Record<number, any>>({}); // 存储提交后的答案结果（来自后端）
 
-// 构建完整的文件URL
-const buildFileUrl = (url: string | null | undefined) => {
-  if (!url) return null;
-
-  // 如果已经是完整的URL，直接返回
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-
-  // 如果是相对路径（以/开头），添加服务器基础URL
-  // 根据接口文档，开发环境基础URL为：http://192.168.64.2:3000
-  const baseUrl = 'http://192.168.64.2:3000';
-  return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`;
-};
+// 使用从 config/env 导入的 buildFileUrl 函数
 
 const normalizeMaterialData = (material: any) => {
   if (!material) return material;
@@ -621,59 +609,32 @@ onUnmounted(() => {
   text-shadow: 0 0 8px var(--primary-color);
 }
 
-/* Media 容器 */
+/* Media 容器 — 图片全铺，播放器叠层在上方 */
 .media-container {
   position: relative;
-  background: linear-gradient(180deg,
-      rgba(255, 255, 255, 0.28) 0%,
-      rgba(255, 255, 255, 0.18) 52%,
-      rgba(255, 255, 255, 0.14) 100%);
+  width: 100%;
+  max-width: 50vw;
+  max-height: 50vh;
+  min-height: 400px;
+  aspect-ratio: 4/3;
+  margin: -10px auto;
+  border-radius: 30px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
   box-shadow:
     0 16px 40px rgba(15, 23, 42, 0.14),
     inset 0 1px 0 rgba(255, 255, 255, 0.72),
     inset 0 -1px 0 rgba(255, 255, 255, 0.2);
   border: 1.5px solid rgba(255, 255, 255, 0.42);
-  backdrop-filter: blur(22px) saturate(165%);
-  -webkit-backdrop-filter: blur(22px) saturate(165%);
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 800px;
-  max-height: 50vh;
-  /* 最大高度为视口的40% */
-  min-height: 400px;
-  /* 最小高度保证可见性 */
-  aspect-ratio: 4/3;
-  /* 保持 4:3 的宽高比 */
-  margin: -10px auto;
-  gap: 0;
-  border-radius: 30px;
-  overflow: hidden;
 }
 
-.media-container::before {
-  content: '';
+/* 图片全铺容器 */
+.image-box {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.08) 34%, rgba(255, 255, 255, 0.02) 100%),
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.34) 0%, transparent 42%);
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Image 模块 */
-.image-box,
-.player {
-  position: relative;
-  z-index: 2;
-}
-
-.image-box {
   width: 100%;
-  flex: 7 0 0%;
-  /* 占 7 份，不收缩，基础尺寸为0% */
-  border-radius: 30px 30px 0 0;
+  height: 100%;
+  z-index: 1;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
 }
@@ -682,6 +643,25 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* 底部模糊渐变 — 覆盖播放器区域 */
+.media-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  z-index: 2;
+  pointer-events: none;
+  backdrop-filter: blur(30px);
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  -webkit-backdrop-filter: blur(30px);
+  -webkit-mask: linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
+  mask: linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
+  background: linear-gradient(to top, rgba(0,0,0,0.12) 0%, transparent 100%);
 }
 
 .title {
@@ -699,20 +679,16 @@ onUnmounted(() => {
 
 
 .player {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
   width: 100%;
-  flex: 3 0 0%;
-  /* 占 3 份，不收缩，基础尺寸为0% */
+  height: 30%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg,
-      rgba(255, 255, 255, 0.1) 0%,
-      rgba(255, 255, 255, 0.16) 100%);
-  /* 添加轻微背景让播放器更可见 */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 0 0 30px 30px;
 }
 
 
@@ -949,10 +925,6 @@ onUnmounted(() => {
 
   }
 
-  .image-box {
-    width: 100%;
-    /* height 由 flex 属性控制 */
-  }
 
   .title {
     font-size: 1.5rem;
