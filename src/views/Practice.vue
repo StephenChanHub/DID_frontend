@@ -15,6 +15,10 @@
               <Player :src="item.audio_url" :active="activeCards[item.id]" />
             </div>
           </div>
+          <div v-if="hasMeta(item.country) || hasMeta(item.topic)" class="material-meta-tags">
+            <span v-if="hasMeta(item.country)" class="meta-tag">{{ item.country }}</span>
+            <span v-if="hasMeta(item.topic)" class="meta-tag">{{ item.topic }}</span>
+          </div>
 
           <div class="content-section">
             <h1 class="title">{{ item.title }}</h1>
@@ -101,6 +105,8 @@ const activeCards = reactive<Record<number, boolean>>({}); // 存储卡片激活
 const showResult = ref(false);
 const favoriteCards = reactive<Record<number, boolean>>({}); // 存储收藏状态
 const answerResults = ref<Record<number, any>>({}); // 存储提交后的答案结果（来自后端）
+
+const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 
 // 使用从 config/env 导入的 buildFileUrl 函数
 
@@ -662,6 +668,24 @@ onUnmounted(() => {
   -webkit-mask: linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
   mask: linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
   background: linear-gradient(to top, rgba(0,0,0,0.12) 0%, transparent 100%);
+}
+
+.material-meta-tags {
+  margin-top: 5px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.meta-tag {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: rgba(var(--primary-color-rgb, 74, 144, 226), 0.14);
+  color: var(--primary-color);
+  font-weight: 500;
+  line-height: 1.2;
 }
 
 .title {
