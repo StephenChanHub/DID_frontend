@@ -42,7 +42,10 @@
                     </div>
                     <div class="card-footer">
                         <span class="type-badge">{{ item.level }}</span>
-                        <span class="date">{{ formatDate(item.created_at) }}</span>
+                        <div v-if="hasMeta(item.country) || hasMeta(item.topic)" class="meta-tags">
+                            <span v-if="hasMeta(item.country)" class="meta-tag">{{ item.country }}</span>
+                            <span v-if="hasMeta(item.topic)" class="meta-tag">{{ item.topic }}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -125,9 +128,7 @@ const goToDetail = (id: number) => {
     });
 };
 
-const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString();
-};
+const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 
 onMounted(() => {
     // 始终获取真实数据
@@ -351,9 +352,21 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
     font-weight: bold;
 }
 
-.date {
-    font-size: 0.8rem;
-    color: #999;
+.meta-tags {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.meta-tag {
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    background: rgba(74, 144, 226, 0.1);
+    color: #4a90e2;
+    border-radius: 8px;
+    line-height: 1.2;
 }
 
 .empty-state {
