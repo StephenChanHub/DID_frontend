@@ -16,6 +16,10 @@ export default defineConfig({
       '/api': {
         target: 'http://192.168.64.2:3000', // ！！！这里填你虚拟机的 IP
         changeOrigin: true
+      },
+      '/uploads': {
+        target: 'http://192.168.64.2:3000', // 静态资源也代理到后端
+        changeOrigin: true
       }
     }
   },

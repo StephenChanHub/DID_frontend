@@ -20,6 +20,13 @@ export const buildFileUrl = (url: string | null | undefined): string | null => {
     return url;
   }
 
+  // 开发环境下，如果 API_BASE_URL 是默认值，可能无法在手机上访问
+  // 改为使用相对路径，依赖 vite 代理转发
+  if (import.meta.env.DEV && API_BASE_URL === 'http://192.168.64.2:3000') {
+    // 确保路径以 / 开头
+    return url.startsWith('/') ? url : '/' + url;
+  }
+
   // 如果是相对路径（以 / 开头），直接拼接基础 URL
   // 如果不是以 / 开头，添加 / 前缀再拼接
   return `${API_BASE_URL}${url.startsWith('/') ? url : '/' + url}`;

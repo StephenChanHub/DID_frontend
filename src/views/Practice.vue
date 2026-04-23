@@ -608,7 +608,7 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 0.5px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -683,7 +683,7 @@ onUnmounted(() => {
   pointer-events: none;
   backdrop-filter: blur(30px);
   border-radius: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 0.5px solid rgba(255, 255, 255, 0.3);
   -webkit-backdrop-filter: blur(30px);
   -webkit-mask: linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
   mask: linear-gradient(to top, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%);
@@ -709,6 +709,7 @@ onUnmounted(() => {
 }
 
 .title {
+  margin-top: -30px;
   font-size: 2rem;
   color: #000;
   text-align: center;
@@ -968,6 +969,11 @@ onUnmounted(() => {
     margin: 0 auto;
 
   }
+
+.player {
+  margin-bottom: 10px;
+  padding: 0 20px;
+}
 
 
   .title {

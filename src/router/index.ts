@@ -7,7 +7,6 @@ const routes = [
     path: '/did',
     name: 'Did',
     component: () => import('@/views/Did.vue')
-    // 移除 requiresAuth，DID 页面可公开访问
   },
   { path: '/preview', name: 'Preview', component: () => import('@/views/Preview.vue') },
   {
