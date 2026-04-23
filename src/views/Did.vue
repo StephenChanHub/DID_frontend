@@ -62,7 +62,10 @@
               </div>
               <div class="card-footer">
                 <span class="type-badge">{{ item.level }}</span>
-                <span class="date">{{ formatDate(item.favorited_at || item.created_at) }}</span>
+                <div v-if="hasMeta(item.country) || hasMeta(item.topic)" class="meta-tags">
+                  <span v-if="hasMeta(item.country)" class="meta-tag">{{ item.country }}</span>
+                  <span v-if="hasMeta(item.topic)" class="meta-tag">{{ item.topic }}</span>
+                </div>
               </div>
             </div>
 
@@ -140,7 +143,7 @@ const goToPractice = (id: number) => {
   });
 };
 
-const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString();
+const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 
 onMounted(() => {
   fetchFavoriteMaterials();
@@ -453,9 +456,21 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   font-weight: 600;
 }
 
-.date {
-  color: #7c8593;
+.meta-tags {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.meta-tag {
+  background: rgba(var(--primary-color-rgb, 74, 144, 226), 0.12);
+  color: var(--primary-color);
+  padding: 4px 10px;
+  border-radius: 12px;
   font-size: 12px;
+  font-weight: 500;
 }
 
 .empty-state,
