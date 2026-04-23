@@ -110,13 +110,33 @@ const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().le
 
 // 使用从 config/env 导入的 buildFileUrl 函数
 
-const normalizeMaterialData = (material: any) => {
-  if (!material) return material;
+const normalizeFilePath = (value: unknown) => {
+  if (typeof value !== 'string') return null;
+  const cleaned = value.trim().replace(/\\/g, '/');
+  return cleaned.length > 0 ? cleaned : null;
+};
 
-  material.image_url = buildFileUrl(material.image_url);
-  material.media_url = buildFileUrl(material.media_url);
-  material.audio_url = material.media_url;
-  return material;
+const normalizeMaterialData = (rawMaterial: any) => {
+  const material = rawMaterial?.data ?? rawMaterial;
+  if (!material || typeof material !== 'object') return null;
+
+  const rawImage = normalizeFilePath(material.image_url ?? material.imageUrl);
+  const rawMedia = normalizeFilePath(
+    material.media_url ?? material.mediaUrl ?? material.audio_url ?? material.audioUrl
+  );
+
+  const imageUrl = buildFileUrl(rawImage);
+  const mediaUrl = buildFileUrl(rawMedia);
+
+  return {
+    ...material,
+    image_url: imageUrl,
+    imageUrl,
+    media_url: mediaUrl,
+    mediaUrl,
+    audio_url: mediaUrl,
+    audioUrl: mediaUrl
+  };
 };
 
 // 获取单个素材详情
