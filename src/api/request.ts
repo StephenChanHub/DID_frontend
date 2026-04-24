@@ -10,7 +10,7 @@ const request = axios.create({
 
 // 请求拦截器：严格遵循 Bearer Token 格式
 request.interceptors.request.use(config => {
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem('did_token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`; // 必须包含 Bearer 前缀
   }
@@ -32,7 +32,7 @@ request.interceptors.response.use(
 
     if (status === 401) {
       alert('登录失效：' + msg);
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('did_token');
       // 不再使用window.location.href跳转，避免PWA模式跳出
       // 由前端组件监听认证状态变化并处理跳转
     } else {

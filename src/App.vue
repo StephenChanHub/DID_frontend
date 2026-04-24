@@ -76,6 +76,8 @@ watch(() => route.path, () => nextTick(updatePill));
 onMounted(() => {
   nextTick(updatePill);
   window.addEventListener('resize', updatePill);
+  // 清除旧的 localStorage 键名
+  ['auth_token', 'nickname', 'username', 'user_level', 'user_points', 'exercise_count', 'avatar'].forEach(k => localStorage.removeItem(k));
 });
 onUnmounted(() => window.removeEventListener('resize', updatePill));
 

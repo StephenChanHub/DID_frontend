@@ -22,7 +22,7 @@
           <div class="level-coin-row">
             <span class="level-tag">LV: {{ userStore.level }}</span>
             <img src="/coin.png" alt="Coin" class="coin">
-            <span class="points-tag">{{ userStore.points }}</span>
+            <span class="points-tag">{{ userStore.coins }}</span>
           </div>
         </div>
       </div>

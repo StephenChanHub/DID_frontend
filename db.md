@@ -5,15 +5,16 @@ USE `did_db`;
 -- 2. 用户表
 CREATE TABLE `users` (
 `id` INT PRIMARY KEY AUTO_INCREMENT,
-`username` VARCHAR(50) NOT NULL UNIQUE COMMENT '账号: 邮箱/手机号',
-`nickname` VARCHAR(10) NOT NULL COMMENT '用户昵称',
-`password` VARCHAR(255) NOT NULL COMMENT 'Bcrypt哈希密码',
-`security_answer` VARCHAR(255) NOT NULL COMMENT '密保答案bcrypt哈希',
-`points` DECIMAL(10, 1) DEFAULT 0.0 COMMENT '可用积分',
-`current_level` ENUM('A1', 'A2', 'B1', 'B2', 'C1', 'C2') DEFAULT NULL COMMENT '当前动态等级',
-`last_practice_date` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '最后一次练习时间',
+`email` VARCHAR(100) NOT NULL UNIQUE COMMENT '登录邮箱',
+`nickname` VARCHAR(50) DEFAULT 'New Learner' COMMENT '用户昵称',
+`password_hash` VARCHAR(255) NOT NULL COMMENT 'Bcrypt加密后的哈希',
+`coins` INT DEFAULT 0 COMMENT 'Coin数量', -- 取代原来的 points
+`level` ENUM('A1', 'A2', 'B1', 'B2', 'C1', 'C2') DEFAULT 'A1' COMMENT '等级',
+`is_active` TINYINT(1) DEFAULT 0 COMMENT '邮箱是否验证成功: 0未验证, 1已验证',
+`last_practice_date` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+-- 使用 utf8mb4 以支持 Emoji 物品和头像
 
 -- 3. 素材表 (核心容器: 阅读/听力)
 CREATE TABLE `materials` (
