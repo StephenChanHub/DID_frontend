@@ -31,15 +31,31 @@
           ></div>
         </div>
       </div>
+
+      <div v-if="userStore.isLoggedIn" class="section account-section">
+        <p class="section-title">Account</p>
+        <button class="logout-btn" @click="handleLogout">退出登录</button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useThemeStore } from '@/store/theme';
+import { useUserStore } from '@/store/user';
+import { useRouter } from 'vue-router';
+
 const themeStore = useThemeStore();
+const userStore = useUserStore();
+const router = useRouter();
 const colorLibrary = ['#F5569B', '#701D1C', '#0D21A5', 
 '#91040C', '#548656', '#59597a', '#e5d778', '#354864', '#dea947', '#402925'];
+
+const handleLogout = () => {
+  userStore.logout();
+  themeStore.showSettingModal = false;
+  router.push('/do');
+};
 </script>
 
 <style scoped>
@@ -99,4 +115,25 @@ const colorLibrary = ['#F5569B', '#701D1C', '#0D21A5',
     border: #fff solid 5px;
 /* border-color: rgba(255, 255, 255, 0.9); */
  box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+.account-section {
+  margin-top: 12px;
+}
+
+.logout-btn {
+  width: 100%;
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  background: transparent;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.logout-btn:hover {
+  background: var(--primary-color);
+  color: #fff;
+}
 </style>

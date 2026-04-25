@@ -10,11 +10,11 @@
                 <span class="card-emoji">📖</span>
                 <span class="card-label">Reading</span>
             </div>
-            <div class="glass-card" @click="goPreview('writing')">
+            <div class="glass-card disabled-card" aria-disabled="true">
                 <span class="card-emoji">✏️</span>
                 <span class="card-label">Writing</span>
             </div>
-            <div class="glass-card" @click="goPreview('speaking')">
+            <div class="glass-card disabled-card" aria-disabled="true">
                 <span class="card-emoji">🗣️</span>
                 <span class="card-label">Speaking</span>
             </div>
@@ -67,6 +67,28 @@ const goPreview = (type) => {
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+.glass-card::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(120deg,
+            rgba(255, 255, 255, 0) 10%,
+            rgba(255, 255, 255, 0.95) 30%,
+            rgba(113, 201, 255, 0.9) 45%,
+            rgba(201, 144, 255, 0.9) 60%,
+            rgba(255, 255, 255, 0) 85%);
+    background-size: 220% 220%;
+    opacity: 0;
+    pointer-events: none;
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    transition: opacity 0.25s ease;
+}
+
 .card-emoji {
     display: inline-flex;
     align-items: center;
@@ -109,8 +131,42 @@ const goPreview = (type) => {
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
 }
 
+.glass-card:hover::before {
+    opacity: 1;
+    animation: border-flow 2.2s linear infinite;
+}
+
 .glass-card:hover .card-emoji {
     transform: translate3d(0, -2px, 0) scale(1.03);
+}
+
+.disabled-card {
+    cursor: default;
+}
+
+.disabled-card:hover {
+    transform: none;
+    background: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.disabled-card:hover::before {
+    opacity: 0;
+    animation: none;
+}
+
+.disabled-card:hover .card-emoji {
+    transform: none;
+}
+
+@keyframes border-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 200% 50%;
+    }
 }
 
 @keyframes emoji-fall-heavy {

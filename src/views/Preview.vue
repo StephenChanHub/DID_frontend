@@ -1,20 +1,8 @@
 <template>
-    <!-- 背景虚化遮罩层 -->
-    <div v-if="isDropdownOpen" class="dropdown-backdrop" @click="closeDropdown"></div>
-
-    <!-- 右上角悬浮容器（带下拉菜单） -->
-    <div class="floating-container" :class="{ active: isDropdownOpen }" @click.stop="isDropdownOpen = !isDropdownOpen">
+    <!-- 右上角悬浮容器 -->
+    <div class="floating-container">
         <div class="floating-content">
             {{ typeName }}
-            <span class="dropdown-arrow">▼</span>
-        </div>
-
-        <!-- 下拉菜单 -->
-        <div v-if="isDropdownOpen" class="dropdown-menu">
-            <div v-for="item in trainingTypes" :key="item.value" class="dropdown-item"
-                :class="{ active: type === item.value }" @click.stop="switchTrainingType(item.value)">
-                {{ item.label }}
-            </div>
         </div>
     </div>
 
@@ -78,28 +66,6 @@ const typeName = computed(() => {
     const map: any = { reading: 'Reading', listening: 'Listening', writing: 'Writing', speaking: 'Speaking' };
     return map[type.value] || '练习';
 });
-
-// 下拉菜单状态
-const isDropdownOpen = ref(false);
-
-// 所有可用的训练类型
-const trainingTypes = [
-    { value: 'reading', label: 'Reading' },
-    { value: 'listening', label: 'Listening' },
-    { value: 'writing', label: 'Writing' },
-    { value: 'speaking', label: 'Speaking' }
-];
-
-// 切换训练类型
-const switchTrainingType = (typeValue: string) => {
-    router.push({ query: { ...route.query, type: typeValue } });
-    isDropdownOpen.value = false;
-};
-
-// 关闭下拉菜单（点击外部）
-const closeDropdown = () => {
-    isDropdownOpen.value = false;
-};
 
 // 拉取列表数据
 const fetchList = async () => {
@@ -396,14 +362,8 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
     z-index: 1001;
     transition: 0.3s;
-}
-
-.floating-container.active {
-    border-color: var(--primary-color);
-    background: rgba(255, 255, 255, 0.4);
 }
 
 .floating-content {
@@ -412,92 +372,6 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
     color: var(--text-color);
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.dropdown-arrow {
-    font-size: 10px;
-    transition: transform 0.3s;
-}
-
-.floating-container.active .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-/* 下拉菜单 */
-.dropdown-menu {
-    position: absolute;
-    top: calc(100% + 10px);
-    left: 0;
-    min-width: 100%;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px) saturate(200%);
-    -webkit-backdrop-filter: blur(20px) saturate(200%);
-    border: 0.5px solid rgba(255, 255, 255, 0.6);
-    box-shadow:
-        0 20px 50px rgba(0, 0, 0, 0.2),
-        inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    border-radius: 12px;
-    padding: 8px 0;
-    z-index: 1002;
-    animation: dropdownFadeIn 0.2s ease-out;
-}
-
-@keyframes dropdownFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* 下拉选项 */
-.dropdown-item {
-    padding: 10px 16px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #333;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-}
-
-.dropdown-item:hover {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.dropdown-item.active {
-    color: var(--primary-color);
-    font-weight: 600;
-    /* background: rgba(var(--primary-color-rgb, 245, 86, 155), 0.1); */
-}
-
-/* 背景虚化遮罩层 */
-.dropdown-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.1);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    z-index: 1000;
-    animation: backdropFadeIn 0.2s ease-out;
-}
-
-@keyframes backdropFadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
 }
 
 /* 大屏幕（电脑全屏） */
@@ -534,14 +408,5 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
         font-size: 15px;
     }
 
-    .dropdown-menu {
-        min-width: 100%;
-        border-radius: 10px;
-    }
-
-    .dropdown-item {
-        padding: 8px 14px;
-        font-size: 12px;
-    }
 }
 </style>

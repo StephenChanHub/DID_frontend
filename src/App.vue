@@ -1,6 +1,6 @@
 <template>
   <div class="app-wrapper">
-    <UserModule v-if="!hideLayout" />
+    <UserModule v-if="showUserModule" />
 
     <main :class="['main-view', { 'full-screen': hideLayout }]">
       <router-view />
@@ -34,6 +34,7 @@ const route = useRoute();
 
 // 判断是否需要隐藏布局（用于练习页面）
 const hideLayout = computed(() => route.meta?.hideLayout === true);
+const showUserModule = computed(() => !hideLayout.value && !route.path.startsWith('/did'));
 
 const navRef = ref<HTMLElement | null>(null);
 const navDoRef = ref<any>(null);
