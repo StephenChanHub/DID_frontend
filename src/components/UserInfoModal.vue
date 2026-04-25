@@ -5,70 +5,86 @@ import request from '@/api/request';
 
 const userStore = useUserStore();
 const form = ref({
-  username: userStore.username,
+  email: userStore.email,
   nickname: userStore.nickname,
   password: '',
-  security_answer: ''
+  code: ''
 });
+const sendingCode = ref(false);
 
 const close = () => userStore.toggleInfoModal(false);
-const upperCase = () => form.value.security_answer = form.value.security_answer.toUpperCase();
 
-// 定义接口响应类型
-interface UpdateResponse {
-  message: string;
-  data?: any;
-}
+const sendCode = async () => {
+  if (!form.value.email.trim()) {
+    alert('邮箱不能为空');
+    return;
+  }
+  sendingCode.value = true;
+  try {
+    await request.post('/auth/send-reset-code', {
+      email: form.value.email
+    });
+    alert('验证码已发送，请检查邮箱');
+  } catch {
+    // 错误已在拦截器中处理
+  } finally {
+    sendingCode.value = false;
+  }
+};
 
 const handleSubmit = async () => {
   try {
-    // 根据接口文档构建请求体
-    const requestBody: any = {};
+    const hasPassword = form.value.password.trim().length > 0;
+    const hasNicknameChange = form.value.nickname !== userStore.nickname;
 
-    // 检查是否有密码修改
-    if (form.value.password.trim()) {
-      // 修改密码流程：需要用户名和安全答案
-      if (!form.value.username.trim()) {
-        alert('修改密码需要提供用户名');
+    if (!hasPassword && !hasNicknameChange) {
+      alert('未检测到任何修改');
+      return;
+    }
+
+    if (hasPassword) {
+      // 修改密码：使用邮箱验证码
+      if (form.value.password.length < 6) {
+        alert('密码长度至少6个字符');
         return;
       }
-      if (!form.value.security_answer.trim()) {
-        alert('修改密码需要提供密保答案');
+      if (!form.value.code.trim()) {
+        alert('请先获取并输入验证码');
         return;
       }
-      requestBody.username = form.value.username;
-      requestBody.security_answer = form.value.security_answer.toUpperCase();
-      requestBody.newPassword = form.value.password;
 
-      // 如果昵称也有变化，一并更新
-      if (form.value.nickname !== userStore.nickname) {
-        requestBody.newNickname = form.value.nickname;
+      await request.post('/auth/reset-password', {
+        email: form.value.email,
+        code: form.value.code,
+        newPassword: form.value.password
+      });
+
+      alert('密码重置成功');
+
+      // 如果同时也修改了昵称，单独调用更新
+      if (hasNicknameChange) {
+        await request.post('/auth/update', {
+          newNickname: form.value.nickname
+        });
       }
     } else {
       // 只修改昵称（用户已登录，有有效Token）
-      if (form.value.nickname === userStore.nickname) {
-        alert('未检测到任何修改');
-        return;
-      }
-      // 只修改昵称：只需提供 newNickname
-      requestBody.newNickname = form.value.nickname;
-    }
-
-    // 调用后端更新接口
-    const response = await request.post('/auth/update', requestBody) as UpdateResponse;
-
-    // 更新本地状态
-    if (form.value.nickname !== userStore.nickname) {
-      userStore.updateProfile({
-        nickname: form.value.nickname,
-        username: userStore.username // 保持原用户名不变
+      await request.post('/auth/update', {
+        newNickname: form.value.nickname
       });
     }
 
-    alert(response.message || '信息更新成功');
+    // 更新本地状态
+    if (hasNicknameChange) {
+      userStore.updateProfile({
+        nickname: form.value.nickname,
+        username: userStore.email
+      });
+    }
+
     close();
-  } catch (err: any) {
-    alert(err.response?.data?.message || '更新失败');
+  } catch {
+    // 错误已在拦截器中处理
   }
 };
 </script>
@@ -84,9 +100,8 @@ const handleSubmit = async () => {
       </div>
       
       <div class="input-item style-image">
-        <label>Username (Email/Phone)</label>
-        <input v-model="form.username" type="text" readonly title="用户名不可修改" />
-        <div class="field-hint">Unchangeable ！</div>
+        <label>Email</label>
+        <input :value="form.email" type="email" readonly />
       </div>
 
       <div class="input-item style-image">
@@ -99,9 +114,14 @@ const handleSubmit = async () => {
         <input v-model="form.password" type="password" placeholder="Leave empty if not changing" />
       </div>
 
-      <div class="input-item style-image">
-        <label>Security Answer</label>
-        <input v-model="form.security_answer" type="text" @input="upperCase" />
+      <div class="input-item style-image" v-if="form.password.trim()">
+        <label>Verification Code</label>
+        <div class="code-row">
+          <input v-model="form.code" type="text" placeholder="Enter 6-digit code" maxlength="6" />
+          <button class="btn-send-code" @click="sendCode" :disabled="sendingCode">
+            {{ sendingCode ? 'Sending...' : 'Send Code' }}
+          </button>
+        </div>
       </div>
 
       <div class="btn-group style-image">
@@ -176,4 +196,31 @@ button { flex: 1; padding: 15px; border: none; border-radius: 12px; cursor: poin
   margin-top: 4px;
   margin-left: 5px;
 }
+
+.code-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.code-row input {
+  flex: 1;
+}
+.btn-send-code {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  white-space: nowrap;
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  transition: opacity 0.2s;
+}
+.btn-send-code:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 </style>
+

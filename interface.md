@@ -14,7 +14,8 @@
 1. **用户认证**: 通过 `/api/auth/login` 获取 JWT Token
 2. **Token使用**: 在请求头中添加 `Authorization: Bearer <token>`
 3. **Token有效期**: Token有效期统一为7天
-4. **权限区分**: 普通用户和管理员使用相同的密钥，管理员接口需要 `role: 'admin'` 权限（通过在数据库中将用户role字段改为'admin'实现）
+4. **权限区分**: 普通用户和管理员使用相同的密钥，管理员接口需要 `role: 'ADMIN'` 权限
+5. **超级管理员**: 通过环境变量 `SUPER_ADMIN_EMAIL` 配置，使用该邮箱注册的用户自动获得 ADMIN 角色
 
 ### 通用响应格式
 
@@ -200,6 +201,73 @@
 ```
 
 - **用途**: 用于检查Token是否有效，获取当前用户信息
+
+### 5. 发送密码重置验证码
+
+**用户忘记密码时，向注册邮箱发送验证码**
+
+- **URL**: `/api/auth/send-reset-code`
+- **Method**: `POST`
+- **认证**: 不需要
+- **请求体**:
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+- **验证规则**:
+  - 邮箱格式必须正确
+  - 邮箱必须已注册
+
+- **成功响应** (200):
+
+```json
+{
+  "message": "验证码已发送，请检查邮箱"
+}
+```
+
+- **错误响应**:
+  - 400: 邮箱格式不正确
+  - 404: 该邮箱未注册
+  - 500: 服务器内部错误
+
+### 6. 重置密码
+
+**通过邮箱验证码重置密码**
+
+- **URL**: `/api/auth/reset-password`
+- **Method**: `POST`
+- **认证**: 不需要
+- **请求体**:
+
+```json
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "newPassword": "new_password123"
+}
+```
+
+- **验证规则**:
+  - 验证码为6位数字
+  - 新密码长度至少6个字符
+  - 验证码5分钟内有效
+  - 验证码使用后立即失效（防止重复使用）
+
+- **成功响应** (200):
+
+```json
+{
+  "message": "密码重置成功"
+}
+```
+
+- **错误响应**:
+  - 400: 验证码错误或已过期、密码太短、参数格式不正确
+  - 500: 服务器内部错误
 
 ---
 
@@ -571,7 +639,7 @@ GET /api/materials/1
 
 ### 1. 管理员登录
 
-**管理员专用登录接口（简化版）**
+**管理员专用登录接口**
 
 - **URL**: `/api/auth/admin/login`
 - **Method**: `POST`
@@ -580,25 +648,25 @@ GET /api/materials/1
 
 ```json
 {
-  "username": "admin@example.com",
+  "email": "admin@example.com",
   "password": "admin_password"
 }
 ```
 
 - **参数说明**:
-  - `username`: 管理员账号（必须在数据库中将用户的role字段手动改为'admin'）
+  - `email`: 管理员邮箱（对应数据库中 role='ADMIN' 的用户）
   - `password`: 管理员密码
 
 - **成功响应** (200):
 
 ```json
 {
-  "message": "管理员认证成功",
+  "message": "管理员登录成功",
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "adminInfo": {
-    "username": "admin@example.com",
     "nickname": "管理员昵称",
-    "role": "admin"
+    "email": "admin@example.com",
+    "role": "ADMIN"
   }
 }
 ```
@@ -606,7 +674,8 @@ GET /api/materials/1
 - **注意**:
   - 管理员与普通用户使用相同的JWT密钥（JWT_SECRET）
   - Token有效期统一为7天
-  - 管理员权限通过在数据库中将用户role字段改为'admin'实现
+  - 管理员权限通过在数据库中将用户role字段设为'ADMIN'实现
+  - 超级管理员通过注册时匹配 SUPER_ADMIN_EMAIL 自动获得 ADMIN 角色
 
 ### 2. 管理员认证测试
 
@@ -623,12 +692,66 @@ GET /api/materials/1
 {
   "message": "管理员认证成功",
   "user": {
-    "id": 1,
-    "username": "admin@example.com",
-    "role": "admin"
+    "userId": 1,
+    "email": "admin@example.com",
+    "role": "ADMIN"
   }
 }
 ```
+
+### 3. 用户管理（管理员专用）
+
+**获取用户列表，支持搜索和筛选**
+
+- **URL**: `/api/auth/admin/users`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+- **查询参数**:
+  - `keyword` (可选): 搜索关键词，匹配邮箱或昵称
+  - `role` (可选): 按角色筛选，`USER` 或 `ADMIN`
+
+- **示例请求**:
+
+```
+GET /api/auth/admin/users?keyword=stephen&role=ADMIN
+```
+
+- **成功响应** (200):
+
+```json
+{
+  "total": 1,
+  "users": [
+    {
+      "id": 1,
+      "email": "stephen@example.com",
+      "nickname": "Stephen",
+      "role": "ADMIN",
+      "coins": 150,
+      "level": "B1",
+      "last_practice_date": "2026-04-24T10:30:00.000Z",
+      "created_at": "2026-04-20T08:00:00.000Z"
+    }
+  ]
+}
+```
+
+- **字段说明**:
+  - `total`: 符合条件用户总数
+  - `users`: 用户数组
+    - `id`: 用户ID
+    - `email`: 邮箱
+    - `nickname`: 昵称
+    - `role`: 角色（USER 或 ADMIN）
+    - `coins`: 积分
+    - `level`: 当前等级
+    - `last_practice_date`: 上次练习时间（从未练习则为 null）
+    - `created_at`: 注册时间
+
+- **错误响应**:
+  - 401: Token无效或过期
+  - 403: 非管理员访问
+  - 500: 服务器内部错误
 
 ### 3. 创建素材
 
@@ -757,6 +880,10 @@ GET /api/materials/1
   - 标题长度不超过255字符
   - 内容不能为空字符串
 
+- **注意**:
+  - 如果更新了 `media_url` 或 `image_url`，旧的对应文件会从服务器上删除（先更新数据库，再删旧文件）
+  - 如果旧文件不存在于磁盘上，会自动跳过删除操作，不影响更新
+
 - **成功响应** (200):
 
 ```json
@@ -783,6 +910,7 @@ GET /api/materials/1
 - **注意**:
   - 删除素材会级联删除所有关联的题目（数据库外键约束）
   - 同时会删除用户收藏记录和练习历史记录
+  - 素材关联的图片和音频文件会从服务器上同步删除（先删数据库记录，再删文件）
 
 - **成功响应** (200):
 
@@ -860,6 +988,65 @@ GET /api/materials/1
 
 - **错误响应**:
   - 404: 题目未找到
+  - 500: 服务器内部错误
+
+### 9. 获取素材题目及答案（管理员专用）
+
+**获取指定素材的完整题目列表，包含正确答案**
+
+- **URL**: `/api/materials/admin/materials/:id/questions`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+- **路径参数**:
+  - `id`: 素材ID（必须是数字）
+
+- **示例请求**:
+
+```
+GET /api/materials/admin/materials/1/questions
+```
+
+- **成功响应** (200):
+
+```json
+{
+  "id": 1,
+  "type": "reading",
+  "level": "B1",
+  "title": "环境保护的重要性",
+  "content": "环境保护是当今社会面临的重要课题...",
+  "media_url": null,
+  "image_url": "/uploads/image_12345.jpg",
+  "country": "",
+  "topic": "",
+  "full_analysis": "本文讨论了环境保护的多个方面...",
+  "created_at": "2026-04-15T10:30:00.000Z",
+  "questions": [
+    {
+      "id": 1,
+      "q_type": "choice",
+      "stem": "文章主要讨论了什么？",
+      "options": ["环境保护", "经济发展", "政治体制", "科技创新"],
+      "std_answer": "A"
+    },
+    {
+      "id": 2,
+      "q_type": "fill",
+      "stem": "环境保护有助于维护生态______。",
+      "options": null,
+      "std_answer": "平衡"
+    }
+  ]
+}
+```
+
+- **字段说明**:
+  - `std_answer`: 标准答案（此字段仅在管理员接口返回，普通用户素材详情接口不返回）
+  - 其他字段同普通素材详情接口
+
+- **错误响应**:
+  - 400: 素材ID格式错误（非数字）
+  - 404: 素材未找到
   - 500: 服务器内部错误
 
 ---
@@ -981,8 +1168,15 @@ Content-Type: multipart/form-data
 }
 ```
 
-### 4. 文件上传流程（前端集成示例）
+- **错误响应**:
+  - 400: 参数验证失败（文件名或类型为空、类型无效）
+  - 404: 文件不存在
+  - 409: 文件正在被素材使用，无法删除（响应中包含素材名称和 ID）
+  - 500: 服务器内部错误
 
+````
+
+### 4. 文件上传流程（前端集成示例）
 1. **用户选择文件**并触发上传
 2. **前端验证文件**类型和大小
 3. **发送上传请求**到 `/api/upload/`，携带用户Token
@@ -990,25 +1184,24 @@ Content-Type: multipart/form-data
 5. **创建素材时**使用返回的URL作为`media_url`或`image_url`
 
 - **前端示例代码** (JavaScript):
-
 ```javascript
 // 文件上传函数
 async function uploadFile(file, token) {
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append('file', file);
 
-  const response = await fetch("/api/upload/", {
-    method: "POST",
+  const response = await fetch('/api/upload/', {
+    method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      'Authorization': `Bearer ${token}`
       // 注意：不要设置Content-Type，浏览器会自动设置multipart/form-data
     },
-    body: formData,
+    body: formData
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || "上传失败");
+    throw new Error(error.message || '上传失败');
   }
 
   return await response.json();
@@ -1016,21 +1209,21 @@ async function uploadFile(file, token) {
 
 // 创建素材时使用上传的文件
 async function createMaterial(materialData, fileUrl, token) {
-  const response = await fetch("/api/materials/admin/create", {
-    method: "POST",
+  const response = await fetch('/api/materials/admin/create', {
+    method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       ...materialData,
-      image_url: fileUrl, // 或 media_url
-    }),
+      image_url: fileUrl  // 或 media_url
+    })
   });
 
   return await response.json();
 }
-```
+````
 
 ---
 
@@ -1097,11 +1290,12 @@ const API_BASE_URL =
 
 ## 📝 更新日志
 
-### 2026-04-22
+### 2026-04-26
 
-- 素材表新增 `country`（国家/地区）和 `topic`（主题分类）字段，VARCHAR(255)，默认为空
-- 素材列表、素材详情、收藏列表接口响应新增 `country` 和 `topic` 字段
-- 创建素材和更新素材接口支持 `country` 和 `topic` 可选参数
-- 更新接口文档，完善素材相关字段说明
+- 新增找回密码功能，支持通过邮箱验证码重置密码
+- 新增 `POST /api/auth/send-reset-code` 接口，向已注册邮箱发送重置验证码
+- 新增 `POST /api/auth/reset-password` 接口，通过验证码和邮箱重置密码
+- 验证码有效期为5分钟，使用独立 Redis 前缀 (`auth:reset:`) 避免与注册验证码冲突
+- 更新接口文档，增加找回密码相关接口说明
 
 ---

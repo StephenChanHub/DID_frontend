@@ -98,7 +98,7 @@ const handleLogin = async () => {
       email: form.value.email,
       password: form.value.password
     });
-    userStore.loginSuccess(res);
+    userStore.loginSuccess({ ...res, email: form.value.email });
     close();
   } catch (err: any) {
     alert(err.response?.data?.message || 'Login failed');
@@ -121,7 +121,7 @@ const handleRegister = async () => {
       email: form.value.email,
       password: form.value.password
     });
-    userStore.loginSuccess(loginRes);
+    userStore.loginSuccess({ ...loginRes, email: form.value.email });
     close();
   } catch (err: any) {
     alert(err.response?.data?.message || 'Registration failed');

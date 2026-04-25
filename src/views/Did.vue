@@ -48,7 +48,7 @@
         </div>
         <div class="did-nav-item" :class="{ active: activeTab === 'albums' }" @click="switchTab('albums')">
           <!-- <span class="nav-icon">📁</span> -->
-          <span class="nav-label">Albums</span>
+          <span class="nav-label">Collections</span>
         </div>
       </div>
 
