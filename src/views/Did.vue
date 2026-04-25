@@ -17,7 +17,6 @@
         <div class="profile-info">
           <div class="nickname-row">
             <h2 class="nickname">{{ userStore.nickname }}</h2>
-            <button class="logout-btn-header" @click="handleLogout">退出</button>
           </div>
           <div class="level-coin-row">
             <span class="level-tag">LV: {{ userStore.level }}</span>
@@ -98,13 +97,6 @@ const favoriteMaterials = ref<any[]>([]);
 
 // 当前激活的标签页
 const activeTab = ref<'bookmark' | 'bag' | 'albums'>('bookmark');
-
-const handleLogout = () => {
-  userStore.logout();
-  favoriteMaterials.value = [];
-  // 使用router跳转而不是window.location.href
-  router.push('/do');
-};
 
 const fetchFavoriteMaterials = async () => {
   if (!userStore.isLoggedIn) {
@@ -482,27 +474,6 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   text-align: center;
 }
 
-/* 退出登录按钮 */
-.logout-btn-header {
-  color: var(--primary-color);
-  border: 1px solid var(--primary-color);
-  background: none;
-  padding: 6px 16px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 14px;
-  transition: all 0.2s;
-  flex-shrink: 0;
-  margin-left: 10px;
-}
-
-.logout-btn-header:hover {
-  background: var(--primary-color);
-  color: white;
-}
-
-
 /* 响应式设计 */
 @media (max-width: 768px) {
   .profile-header {
@@ -536,16 +507,7 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   }
 
   .nickname-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .logout-btn-header {
-    margin-left: 0;
-    padding: 8px 20px;
-    width: 100%;
-    max-width: 200px;
+    justify-content: center;
   }
 }
 
@@ -601,16 +563,7 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   }
 
   .nickname-row {
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .logout-btn-header {
-    margin-left: 0;
-    padding: 8px 20px;
-    width: 100%;
-    max-width: 200px;
+    justify-content: center;
   }
 }
 </style>
