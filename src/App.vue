@@ -1,6 +1,6 @@
 <template>
+  <UserModule v-if="showUserModule" />
   <div class="app-wrapper">
-    <UserModule v-if="showUserModule" />
 
     <main :class="['main-view', { 'full-screen': hideLayout }]">
       <router-view />

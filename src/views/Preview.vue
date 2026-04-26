@@ -19,8 +19,11 @@
 
         <section class="content-area">
 
+            <div v-if="loading" class="loading-wrapper">
+                <Loading />
+            </div>
 
-            <div class="material-grid">
+            <div v-else class="material-grid">
                 <div v-for="item in materials" :key="item.id" class="material-card" @click="goToDetail(item.id)">
                     <div class="card-content">
                         <h3>{{ item.title }}</h3>
@@ -50,6 +53,7 @@ import { ref, onMounted, computed, watch, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import request from '@/api/request';
 import { useUserStore } from '@/store/user';
+import Loading from '@/components/loading.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -58,6 +62,7 @@ const userStore = useUserStore();
 const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
 const currentLevel = ref('B1'); // 默认展示 B1
 const materials = ref<any[]>([]);
+const loading = ref(false);
 const loginTimer = ref<ReturnType<typeof setTimeout> | null>(null);
 
 // 获取当前训练类型 (reading/listening 等)
@@ -69,6 +74,8 @@ const typeName = computed(() => {
 
 // 拉取列表数据
 const fetchList = async () => {
+    const start = Date.now();
+    loading.value = true;
     try {
         const res: any = await request.get('/materials', {
             params: { type: type.value, level: currentLevel.value }
@@ -76,6 +83,12 @@ const fetchList = async () => {
         materials.value = res;
     } catch (err) {
         console.error('获取列表失败');
+    } finally {
+        const elapsed = Date.now() - start;
+        if (elapsed < 2000) {
+            await new Promise(r => setTimeout(r, 2000 - elapsed));
+        }
+        loading.value = false;
     }
 };
 
@@ -106,7 +119,7 @@ onMounted(() => {
             if (!userStore.isLoggedIn) {
                 userStore.showAuthModal = true;
             }
-        }, 10000);
+        }, 5000);
     }
 });
 
@@ -341,6 +354,14 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
     padding: 60px;
     color: #999;
     font-style: italic;
+}
+
+.loading-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 300px;
+    
 }
 
 /* 右上角悬浮容器 */

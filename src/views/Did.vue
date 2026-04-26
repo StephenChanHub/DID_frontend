@@ -45,9 +45,9 @@
           <!-- <span class="nav-icon">🎒</span> -->
           <span class="nav-label">Bag</span>
         </div>
-        <div class="did-nav-item" :class="{ active: activeTab === 'albums' }" @click="switchTab('albums')">
+        <div class="did-nav-item" :class="{ active: activeTab === 'Store' }" @click="switchTab('Store')">
           <!-- <span class="nav-icon">📁</span> -->
-          <span class="nav-label">Collections</span>
+          <span class="nav-label">Store</span>
         </div>
       </div>
 
@@ -75,7 +75,7 @@
         </div>
 
         <div v-else class="placeholder-content">
-          {{ activeTab === 'bag' ? 'Bag 功能建设中' : 'Albums 功能建设中' }}
+          {{ activeTab === 'bag' ? 'Bag 功能建设中' : 'Store 功能建设中' }}
         </div>
       </div>
 
@@ -96,7 +96,7 @@ const themeStore = useThemeStore();
 const favoriteMaterials = ref<any[]>([]);
 
 // 当前激活的标签页
-const activeTab = ref<'bookmark' | 'bag' | 'albums'>('bookmark');
+const activeTab = ref<'bookmark' | 'bag' | 'Store'>('bookmark');
 
 const fetchFavoriteMaterials = async () => {
   if (!userStore.isLoggedIn) {
@@ -114,7 +114,7 @@ const fetchFavoriteMaterials = async () => {
 };
 
 // 切换标签页
-const switchTab = (tab: 'bookmark' | 'bag' | 'albums') => {
+const switchTab = (tab: 'bookmark' | 'bag' | 'Store') => {
   activeTab.value = tab;
   if (tab === 'bookmark') {
     fetchFavoriteMaterials();
