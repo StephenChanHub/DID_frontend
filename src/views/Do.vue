@@ -18,8 +18,15 @@
                 <span class="card-emoji">🗣️</span>
                 <span class="card-label">Speaking</span>
             </div>
-            <div class="glass-card full-width">💯<br>Testing</div>
-            <div class="glass-card full-width"><br>Relaxing</div>
+             <div class="glass-card full-width disabled-card" aria-disabled="true">
+                <span class="card-emoji">💯</span>
+                <span class="card-label">Testing</span>
+            </div>
+            <div class="glass-card full-width" @click="goStore">
+                <span class="card-emoji">🛍️</span>
+                <span class="card-label">Store</span>
+            </div>
+
         </div>
     </div>
 </template>
@@ -30,6 +37,10 @@ const router = useRouter();
 
 const goPreview = (type) => {
     router.push({ path: '/preview', query: { type } });
+};
+
+const goStore = () => {
+    router.push({ path: '/store' });
 };
 </script>
 
@@ -146,7 +157,7 @@ const goPreview = (type) => {
 
 .disabled-card:hover {
     transform: none;
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.9);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
@@ -157,6 +168,25 @@ const goPreview = (type) => {
 
 .disabled-card:hover .card-emoji {
     transform: none;
+}
+
+.disabled-card::after {
+  content: "⚠️ Under development";
+  position: absolute;
+  inset: 0;
+  background: rgba(200, 200, 200, 0.8);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4c4c4c;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
 }
 
 @keyframes border-flow {

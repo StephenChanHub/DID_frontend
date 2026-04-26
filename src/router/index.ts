@@ -8,6 +8,7 @@ const routes = [
     name: 'Did',
     component: () => import('@/views/Did.vue')
   },
+  { path: '/store', name: 'Store', component: () => import('@/views/Store.vue'), meta: { hideLayout: true } },
   { path: '/preview', name: 'Preview', component: () => import('@/views/Preview.vue') },
   {
     path: '/practice/:id',

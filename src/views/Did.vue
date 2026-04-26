@@ -37,24 +37,37 @@
 
       <!-- 第三行：导航栏 -->
       <div class="navigation-tabs">
-        <div class="did-nav-item" :class="{ active: activeTab === 'bookmark' }" @click="switchTab('bookmark')">
-          <!-- <span class="nav-icon">📚</span> -->
-          <span class="nav-label">Bookmark</span>
+        <div class="nav-dropdown-wrapper">
+          <div class="did-nav-item" :class="{ active: activeTab === 'bookmark', 'dropdown-open': showBookmarkDropdown }" @click="toggleBookmarkDropdown">
+            <span class="nav-label">Bookmark</span>
+            <span class="dropdown-arrow">▾</span>
+          </div>
+          <div v-if="showBookmarkDropdown" class="dropdown-menu">
+            <div class="dropdown-item" :class="{ selected: bookmarkFilter === 'all' }" @click="selectBookmarkFilter('all')">Bookmark</div>
+            <div class="dropdown-item" :class="{ selected: bookmarkFilter === 'listening' }" @click="selectBookmarkFilter('listening')">listening</div>
+            <div class="dropdown-item" :class="{ selected: bookmarkFilter === 'reading' }" @click="selectBookmarkFilter('reading')">reading</div>
+          </div>
         </div>
-        <div class="did-nav-item" :class="{ active: activeTab === 'bag' }" @click="switchTab('bag')">
-          <!-- <span class="nav-icon">🎒</span> -->
-          <span class="nav-label">Bag</span>
+        <div class="nav-dropdown-wrapper">
+          <div class="did-nav-item" :class="{ active: activeTab === 'bag', 'dropdown-open': showBagDropdown }" @click="toggleBagDropdown">
+            <span class="nav-label">Bag</span>
+            <span class="dropdown-arrow">▾</span>
+          </div>
+          <div v-if="showBagDropdown" class="dropdown-menu">
+            <div class="dropdown-item" :class="{ selected: bagSubTab === 'bag' }" @click="selectBagSubTab('bag')">bag</div>
+            <div class="dropdown-item" :class="{ selected: bagSubTab === 'food' }" @click="selectBagSubTab('food')">food</div>
+            <div class="dropdown-item" :class="{ selected: bagSubTab === 'items' }" @click="selectBagSubTab('items')">items</div>
+          </div>
         </div>
-        <div class="did-nav-item" :class="{ active: activeTab === 'Store' }" @click="switchTab('Store')">
-          <!-- <span class="nav-icon">📁</span> -->
-          <span class="nav-label">Store</span>
+        <div class="did-nav-item" :class="{ active: activeTab === 'albums' }" @click="switchTab('albums')">
+          <span class="nav-label">Collections</span>
         </div>
       </div>
 
       <div class="tab-content">
         <div v-if="activeTab === 'bookmark'" class="bookmark-content">
           <div class="material-grid">
-            <div v-for="item in favoriteMaterials" :key="item.id" class="material-card" @click="goToPractice(item.id)">
+            <div v-for="item in filteredMaterials" :key="item.id" class="material-card" @click="goToPractice(item.id)">
               <div class="card-content">
                 <h3>{{ item.title }}</h3>
                 <p class="summary">{{ item.content }}</p>
@@ -68,14 +81,20 @@
               </div>
             </div>
 
-            <div v-if="favoriteMaterials.length === 0" class="empty-state">
+            <div v-if="filteredMaterials.length === 0" class="empty-state">
               暂无收藏内容，去 Practice 页面点亮收藏星标吧。
             </div>
           </div>
         </div>
 
+        <div v-else-if="activeTab === 'bag'" class="bag-content">
+          <Bag v-if="bagSubTab === 'bag'" />
+          <div v-else-if="bagSubTab === 'food'" class="placeholder-content">Food 功能建设中</div>
+          <div v-else class="placeholder-content">Items 功能建设中</div>
+        </div>
+
         <div v-else class="placeholder-content">
-          {{ activeTab === 'bag' ? 'Bag 功能建设中' : 'Store 功能建设中' }}
+          Albums 功能建设中
         </div>
       </div>
 
@@ -84,11 +103,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 import { useThemeStore } from '@/store/theme';
 import request from '@/api/request';
+import Bag from '@/components/Bag.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -96,7 +116,23 @@ const themeStore = useThemeStore();
 const favoriteMaterials = ref<any[]>([]);
 
 // 当前激活的标签页
-const activeTab = ref<'bookmark' | 'bag' | 'Store'>('bookmark');
+const activeTab = ref<'bookmark' | 'bag' | 'albums'>('bookmark');
+
+// 收藏筛选
+const bookmarkFilter = ref<'all' | 'listening' | 'reading'>('all');
+
+// Bag 子标签
+const bagSubTab = ref<'bag' | 'food' | 'items'>('bag');
+
+// 下拉菜单状态
+const showBookmarkDropdown = ref(false);
+const showBagDropdown = ref(false);
+
+// 筛选后的收藏内容
+const filteredMaterials = computed(() => {
+  if (bookmarkFilter.value === 'all') return favoriteMaterials.value;
+  return favoriteMaterials.value.filter((item: any) => item.type === bookmarkFilter.value);
+});
 
 const fetchFavoriteMaterials = async () => {
   if (!userStore.isLoggedIn) {
@@ -114,10 +150,45 @@ const fetchFavoriteMaterials = async () => {
 };
 
 // 切换标签页
-const switchTab = (tab: 'bookmark' | 'bag' | 'Store') => {
+const switchTab = (tab: 'bookmark' | 'bag' | 'albums') => {
   activeTab.value = tab;
+  showBookmarkDropdown.value = false;
+  showBagDropdown.value = false;
   if (tab === 'bookmark') {
     fetchFavoriteMaterials();
+  }
+};
+
+// Bookmark 下拉菜单
+const toggleBookmarkDropdown = () => {
+  activeTab.value = 'bookmark';
+  showBagDropdown.value = false;
+  showBookmarkDropdown.value = !showBookmarkDropdown.value;
+};
+
+const selectBookmarkFilter = (filter: 'all' | 'listening' | 'reading') => {
+  bookmarkFilter.value = filter;
+  showBookmarkDropdown.value = false;
+};
+
+// Bag 下拉菜单
+const toggleBagDropdown = () => {
+  activeTab.value = 'bag';
+  showBookmarkDropdown.value = false;
+  showBagDropdown.value = !showBagDropdown.value;
+};
+
+const selectBagSubTab = (tab: 'bag' | 'food' | 'items') => {
+  bagSubTab.value = tab;
+  showBagDropdown.value = false;
+};
+
+// 点击外部关闭下拉菜单
+const handleClickOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest('.nav-dropdown-wrapper')) {
+    showBookmarkDropdown.value = false;
+    showBagDropdown.value = false;
   }
 };
 
@@ -138,7 +209,12 @@ const goToPractice = (id: number) => {
 const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 
 onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
   fetchFavoriteMaterials();
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
 });
 
 watch(() => userStore.isLoggedIn, (isLoggedIn) => {
@@ -373,6 +449,64 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   color: white;
   border-color: var(--primary-color);
   box-shadow: 0 4px 12px rgba(var(--primary-color-rgb, 74, 144, 226), 0.3);
+}
+
+/* 下拉菜单 */
+.nav-dropdown-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+  color: #333;
+}
+
+.dropdown-item:hover {
+  background: rgba(var(--primary-color-rgb, 74, 144, 226), 0.1);
+}
+
+.dropdown-item.selected {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.dropdown-arrow {
+  font-size: 20px;
+  margin-left: 4px;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-open .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.did-nav-item.active .dropdown-arrow {
+  color: white;
+}
+
+.bag-content {
+  width: 100%;
 }
 
 
