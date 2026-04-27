@@ -3,7 +3,8 @@
     <div class="shell">
       <header class="topbar">
         <div class="Wrap">
-          <span class="Text">{{ mode === 'buy' ? '👴：What do you need?' : '👴：What do you want to sell?' }}</span>
+          <img class="Salesperson" :src="`/public/Salesperson0${salesperson}.png`" alt="salesperson" />
+          <span class="Text">{{ mode === 'buy' ? 'Welcome to the DID Store! What do you need?' : 'Welcome to the DID Store! What do you want to sell?' }}</span>
         </div>
 
         <div class="actionGroup">
@@ -28,7 +29,7 @@
         <section class="productPanel">
           <div class="grid">
             <article v-for="item in filteredProducts" :key="item.id" class="card">
-              <div class="thumb">○</div>
+              <div class="thumb">{{ item.emoji }}</div>
               <div class="cardBody">
                 <h3 class="title">{{ item.name }}</h3>
                 <p class="desc">{{ item.desc }}</p>
@@ -58,21 +59,25 @@ onMounted(() => {
   }
 })
 
+const salesperson = ref(Math.floor(Math.random() * 3) + 1)
 const mode = ref('buy')
 const selectedCategory = ref('food')
 
 const categories = ['food', 'collections']
 
 const products = ref([
-  { id: 1, category: 'food', name: 'Apple', desc: 'Fresh and sweet' },
-  { id: 2, category: 'food', name: 'Bread', desc: 'Daily bakery item' },
-  { id: 3, category: 'food', name: 'Milk', desc: 'Cold drink' },
-  { id: 4, category: 'food', name: 'Snack', desc: 'Quick bite' },
-  { id: 5, category: 'collections', name: 'Coin', desc: 'Limited edition' },
-  { id: 6, category: 'collections', name: 'Stamp', desc: 'Classic collection' },
-  { id: 7, category: 'collections', name: 'Headphones', desc: 'Wireless audio' },
-  { id: 11, category: 'food', name: 'Eggs', desc: 'Protein food' },
-  { id: 12, category: 'food', name: 'Rice', desc: 'Staple food' },
+  { id: 2, category: 'collections', emoji: '🎒', name: 'Backpack', desc: 'Carry your essentials' },
+   { id: 1, category: 'food', emoji: '🍎', name: 'Apple', desc: 'Fresh and sweet' },
+  { id: 2, category: 'food', emoji: '👝', name: 'Pouch', desc: 'Small storage' },
+  { id: 3, category: 'food', emoji: '💼', name: 'Briefcase', desc: 'Professional carry' },
+  { id: 4, category: 'food', emoji: '🧳', name: 'Luggage', desc: 'Travel companion' },
+  { id: 5, category: 'food', emoji: '👜', name: 'Handbag', desc: 'Everyday style' },
+  { id: 6, category: 'food', emoji: '🎒', name: 'Daypack', desc: 'Light & compact' },
+  { id: 7, category: 'food', emoji: '👛', name: 'Wallet', desc: 'Keep your coins' },
+  { id: 8, category: 'food', emoji: '🧰', name: 'Toolbox', desc: 'Gear & tools' },
+  { id: 9, category: 'food', emoji: '📦', name: 'Box', desc: 'Storage container' },
+  { id: 10, category: 'food', emoji: '🧺', name: 'Basket', desc: 'Woven carry' },
+  { id: 11, category: 'food', emoji: '🪣', name: 'Bucket', desc:'Waterproof bin' },
 ])
 
 const filteredProducts = computed(() => {
@@ -92,6 +97,9 @@ const filteredProducts = computed(() => {
 
 .shell {
   width: min(1200px, 100%);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 24px;
   padding: 24px;
@@ -119,15 +127,38 @@ const filteredProducts = computed(() => {
   align-items: center;
   padding: 0 24px;
   box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.35);
+  background: transparent;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 
+.Salesperson {
+  width: 80px;
+  height: 100%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .Text {
+  position: relative;
+  margin-left: 24px;
+  padding: 14px 22px;
   font-size: 24px;
   color: black;
   font-weight: 800;
+  background: #fff;
+  border-radius: 4px 18px 18px 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  line-height: 1.4;
+}
+
+.Text::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 24px;
+  border: 6px solid transparent;
+  border-right-color: #fff;
 }
 
 .actionGroup {
@@ -146,18 +177,24 @@ const filteredProducts = computed(() => {
   -webkit-backdrop-filter: blur(10px);
   font-size: 24px;
   color: var(--primary-color);
-  opacity: 0.5;
-  font-weight: 800;
+  opacity: 0.7;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
 .actionBtn.primary {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
 }
 
 .content {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 180px 1fr;
   gap: 24px;
@@ -178,19 +215,29 @@ const filteredProducts = computed(() => {
   -webkit-backdrop-filter: blur(10px);
   font-size: 28px;
   color: black;
-  font-weight: 800;
+  font-weight: 500;
   text-transform: lowercase;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: background 0.2s, box-shadow 0.2s, opacity 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.categoryBtn:active {
+  transform: scale(0.96);
 }
 
 .categoryBtn.active {
   background: rgba(255, 255, 255, 0.6);
   opacity: 1;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
 }
 
 .categoryBtn:not(.active) {
-  opacity: 0.5;
+  opacity: 0.7;
 }
 
 .productPanel {
@@ -200,12 +247,16 @@ const filteredProducts = computed(() => {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0;
+  min-width: 0;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-width: 0;
 }
 
 .card {
@@ -332,11 +383,26 @@ const filteredProducts = computed(() => {
   }
 
   .Wrap {
-    height: 64px;
+    height: auto;
+    padding: 12px 16px;
   }
 
-  .searchText {
-    font-size: 22px;
+  .Salesperson {
+    width: 72px;
+    height: 72px;
+  }
+
+  .Text {
+    font-size: 16px;
+    padding: 10px 14px;
+    margin-left: 16px;
+    border-radius: 3px 14px 14px 14px;
+  }
+
+  .Text::before {
+    left: -8px;
+    top: 18px;
+    border-width: 5px;
   }
 
   .grid {

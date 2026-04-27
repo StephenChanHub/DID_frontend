@@ -171,17 +171,17 @@ const goStore = () => {
 }
 
 .disabled-card::after {
-  content: "⚠️ Under development";
+  content: "⚠️ Under development ⚠️";
   position: absolute;
   inset: 0;
-  background: rgba(200, 200, 200, 0.8);
+  background: rgba(200, 200, 200, 0.9);
   backdrop-filter: blur(1.5px);
   -webkit-backdrop-filter: blur(1.5px);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #4c4c4c;
-  font-size: 20px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.03em;
   border-radius: inherit;

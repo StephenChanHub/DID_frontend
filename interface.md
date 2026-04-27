@@ -35,15 +35,15 @@
 
 ### 错误码说明
 
-| 状态码 | 说明           | 常见场景                           |
-| ------ | -------------- | ---------------------------------- |
-| 200    | 成功           | 获取数据、登录成功                 |
-| 201    | 创建成功       | 注册成功、创建素材成功             |
-| 400    | 请求错误       | 参数验证失败、格式错误             |
-| 401    | 未授权         | Token无效、过期、密码错误          |
-| 403    | 禁止访问       | 权限不足（非管理员访问管理员接口） |
-| 404    | 资源不存在     | 素材ID不存在                       |
-| 500    | 服务器内部错误 | 数据库异常、未捕获错误             |
+| 状态码 | 说明           | 常见场景                                     |
+| ------ | -------------- | -------------------------------------------- |
+| 200    | 成功           | 获取数据、登录成功                           |
+| 201    | 创建成功       | 注册成功、创建素材成功                       |
+| 400    | 请求错误       | 参数验证失败、格式错误                       |
+| 401    | 未授权         | Token无效、过期、密码错误                    |
+| 403    | 禁止访问       | 权限不足（非管理员访问管理员接口）、体力不足 |
+| 404    | 资源不存在     | 素材ID不存在                                 |
+| 500    | 服务器内部错误 | 数据库异常、未捕获错误                       |
 
 ---
 
@@ -116,8 +116,11 @@
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "nickname": "用户昵称",
-    "points": 150.5,
+    "coins": 150,
     "level": "B1",
+    "total_questions": 42,
+    "stamina": 85,
+    "max_stamina": 100,
     "role": "user"
   }
 }
@@ -126,9 +129,12 @@
 - **字段说明**:
   - `token`: JWT Token，需要在后续请求的Header中携带
   - `user.nickname`: 用户昵称
-  - `user.points`: 用户当前积分（浮点数）
+  - `user.coins`: 用户当前 Coin 数量
   - `user.level`: 用户当前等级（A1, A2, B1, B2, C1, C2）
-  - `user.role`: 用户角色（user 或 admin）
+  - `user.total_questions`: 用户做题总数
+  - `user.stamina`: 当前体力值
+  - `user.max_stamina`: 体力上限
+  - `user.role`: 用户角色（USER 或 ADMIN）
 
 - **错误响应**:
   - 401: 账号或密码错误
@@ -384,9 +390,16 @@ GET /api/materials/1
 
 ## 📝 练习提交接口
 
+### 体力机制
+
+- **消耗**：每次提交练习消耗 **10 体力**
+- **恢复**：每 **5 分钟**自动恢复 1 点体力（所有 API 请求时自动同步）
+- **上限**：体力不会超过 `max_stamina`
+- **补給**：可使用 food 类物品恢复体力（参见游戏接口）
+
 ### 1. 提交练习答案
 
-**提交用户对素材的练习答案并获取评分**
+**提交用户对素材的练习答案并获取评分及掉落奖励**
 
 - **URL**: `/api/practice/submit`
 - **Method**: `POST`
@@ -416,20 +429,37 @@ GET /api/materials/1
     - `val`: 用户答案值
 
 - **评分规则**:
-  1. **正确率计算**: 对比用户答案和标准答案
-  2. **通过标准**: ≥60% 正确率
-  3. **冷却期**: 7天（168小时）内重复完成同一素材不会获得新积分
-  4. **积分计算**: 根据素材等级给予不同积分
-  5. **等级更新**: 完成练习后用户等级可能更新为素材等级
+  1. **体力检查**: 体力不足 10 时返回 403，不允许提交
+  2. **体力扣减**: 每次提交消耗 10 体力
+  3. **做题统计**: 每次提交 `total_questions` +1（无论对错）
+  4. **正确率计算**: 对比用户答案和标准答案
+  5. **通过标准**: ≥60% 正确率
+  6. **掉落判定**（仅通过时触发）：根据 `material_reward_configs` 配置的概率掉落 items 或 collections
 
-- **成功响应** (200):
+- **成功响应（通过并有掉落）** (200):
 
 ```json
 {
-  "message": "恭喜！获得 1.0 积分，当前等级已更新为 B1",
   "isPassed": true,
   "correctCount": 5,
   "totalQuestions": 8,
+  "stamina": 75,
+  "message": "恭喜！获得 🍎 魔法苹果 x2、📀 爵士专辑",
+  "drops": [
+    {
+      "rewardType": "item",
+      "rewardId": 1,
+      "name": "魔法苹果",
+      "emoji": "🍎",
+      "quantity": 2
+    },
+    {
+      "rewardType": "collection",
+      "rewardId": 1,
+      "name": "爵士专辑",
+      "quantity": 1
+    }
+  ],
   "answerDetails": [
     {
       "qId": 1,
@@ -444,7 +474,7 @@ GET /api/materials/1
       "qId": 2,
       "qType": "bool",
       "stem": "地球是平的。",
-      "options": [],
+      "options": ["T", "F"],
       "userAnswer": "F",
       "correctAnswer": "F",
       "isCorrect": true
@@ -453,7 +483,7 @@ GET /api/materials/1
       "qId": 3,
       "qType": "fill",
       "stem": "中国的首都是______。",
-      "options": [],
+      "options": null,
       "userAnswer": "北京",
       "correctAnswer": "北京",
       "isCorrect": true
@@ -462,15 +492,31 @@ GET /api/materials/1
 }
 ```
 
+- **成功响应（通过但无掉落）** (200):
+
 ```json
 {
-  "message": "正确率未达标或处于冷却期",
+  "isPassed": true,
+  "correctCount": 5,
+  "totalQuestions": 8,
+  "stamina": 75,
+  "message": "通过但未掉落物品，继续加油！",
+  "drops": [],
+  "answerDetails": [ ... ]
+}
+```
+
+- **成功响应（未通过）** (200):
+
+```json
+{
   "isPassed": false,
   "correctCount": 3,
   "totalQuestions": 8,
-  "answerDetails": [
-    // 同上，包含所有题目的详细对比信息
-  ]
+  "stamina": 75,
+  "message": "正确率未达标（3/8），无奖励",
+  "drops": [],
+  "answerDetails": [ ... ]
 }
 ```
 
@@ -478,19 +524,36 @@ GET /api/materials/1
   - `isPassed`: 是否通过（正确率≥60%）
   - `correctCount`: 答对题目数
   - `totalQuestions`: 总题目数
-  - `message`: 详细结果信息（包含积分获得情况）
-  - `answerDetails`: 题目答案详细对比数组（新增）
+  - `stamina`: 剩余体力值
+  - `message`: 详细结果信息（包含掉落情况）
+  - `drops`: 掉落的奖励数组
+    - `rewardType`: 奖励类型（`item` 或 `collection`）
+    - `rewardId`: 奖励ID
+    - `name`: 奖励名称
+    - `emoji`: 物品 Emoji（仅 item 类型有此字段）
+    - `quantity`: 获得数量
+  - `answerDetails`: 题目答案详细对比数组
     - `qId`: 题目ID
     - `qType`: 题目类型（choice: 选择题, bool: 判断题, fill: 填空题）
     - `stem`: 题干内容
-    - `options`: 选项数组（选择题为字符串数组，其他类型为空数组）
+    - `options`: 选项数组（选择题为字符串数组，填空题为 null）
     - `userAnswer`: 用户提交的答案
     - `correctAnswer`: 标准答案
     - `isCorrect`: 用户答案是否正确
 
 - **错误响应**:
   - 400: 参数验证失败（materialId非数字，answers格式错误）
+  - 403: 体力不足（`stamina < 10`），响应包含当前体力值
   - 500: 服务器内部错误
+
+- **体力不足响应** (403):
+
+```json
+{
+  "message": "体力不足，请稍后再试",
+  "stamina": 5
+}
+```
 
 ---
 
@@ -632,6 +695,224 @@ GET /api/materials/1
   "isFavorited": true
 }
 ```
+
+---
+
+## 🎮 游戏接口
+
+### 1. 获取用户状态
+
+**获取用户统计信息（体力、Coins、做题数等）**
+
+- **URL**: `/api/user/stats`
+- **Method**: `GET`
+- **认证**: 需要用户Token
+- **说明**: 请求前自动同步体力恢复
+
+- **成功响应** (200):
+
+```json
+{
+  "nickname": "用户昵称",
+  "coins": 150,
+  "level": "B1",
+  "totalQuestions": 42,
+  "stamina": 85,
+  "maxStamina": 100
+}
+```
+
+---
+
+### 2. 查看背包
+
+**获取用户背包中的物品列表**
+
+- **URL**: `/api/items/inventory`
+- **Method**: `GET`
+- **认证**: 需要用户Token
+
+- **成功响应** (200):
+
+```json
+{
+  "items": [
+    {
+      "item_id": 1,
+      "quantity": 5,
+      "name": "魔法苹果",
+      "emoji": "🍎",
+      "type": "food",
+      "description": "回复体力的神奇苹果",
+      "recovery_value": 20,
+      "sell_price": 0
+    },
+    {
+      "item_id": 2,
+      "quantity": 3,
+      "name": "金色羽毛",
+      "emoji": "🪶",
+      "type": "item",
+      "description": "稀有的金色羽毛",
+      "recovery_value": 0,
+      "sell_price": 50
+    }
+  ]
+}
+```
+
+- **字段说明**:
+  - `type`: `food`（可食用恢复体力）或 `item`（可售卖换取 Coin）
+  - `recovery_value`: 体力恢复值（仅 food 有效）
+  - `sell_price`: 售卖获得的 Coin 数量
+
+---
+
+### 3. 出售物品
+
+**出售背包中的物品换取 Coins**
+
+- **URL**: `/api/items/sell`
+- **Method**: `POST`
+- **认证**: 需要用户Token
+- **请求体**:
+
+```json
+{
+  "itemId": 2,
+  "quantity": 2
+}
+```
+
+- **约束**:
+  - `food` 类型物品不可售卖
+  - `sell_price` 为 0 的物品不可售卖
+  - 背包中数量必须足够
+
+- **成功响应** (200):
+
+```json
+{
+  "message": "成功卖出 2 个 金色羽毛，获得 100 Coins",
+  "coins": 250,
+  "soldQuantity": 2,
+  "remainingQuantity": 1
+}
+```
+
+- **错误响应**:
+  - 400: 物品不存在、食物不可售卖、背包数量不足
+  - 500: 服务器内部错误
+
+---
+
+### 4. 使用食物
+
+**使用食物恢复体力**
+
+- **URL**: `/api/items/use`
+- **Method**: `POST`
+- **认证**: 需要用户Token
+- **请求体**:
+
+```json
+{
+  "itemId": 1,
+  "quantity": 2
+}
+```
+
+- **约束**:
+  - 仅 `food` 类型物品可使用
+  - `recovery_value` > 0 才有效
+  - 恢复后体力不会超过 `max_stamina`
+
+- **成功响应** (200):
+
+```json
+{
+  "message": "成功使用 2 个 魔法苹果，恢复 40 体力",
+  "stamina": 100,
+  "maxStamina": 100
+}
+```
+
+- **错误响应**:
+  - 400: 物品不存在、非食物无法食用、背包数量不足
+  - 500: 服务器内部错误
+
+---
+
+### 5. 购买收藏品
+
+**使用 Coins 购买收藏品**
+
+- **URL**: `/api/shop/buy`
+- **Method**: `POST`
+- **认证**: 需要用户Token
+- **请求体**:
+
+```json
+{
+  "collectionId": 1
+}
+```
+
+- **约束**:
+  - Coins 余额必须足够
+  - 不能重复购买已拥有的收藏品
+
+- **成功响应** (200):
+
+```json
+{
+  "message": "成功购买 爵士专辑",
+  "coins": 50,
+  "collection": {
+    "id": 1,
+    "name": "爵士专辑",
+    "imageUrl": "/uploads/image/jazz_album.jpg",
+    "mediaUrl": "/uploads/media/jazz_music.mp3"
+  }
+}
+```
+
+- **错误响应**:
+  - 400: 收藏品不存在、已拥有该收藏品、Coins 不足
+  - 500: 服务器内部错误
+
+---
+
+### 6. 查看我的收藏品
+
+**获取用户已购买的收藏品列表**
+
+- **URL**: `/api/collections/mine`
+- **Method**: `GET`
+- **认证**: 需要用户Token
+
+- **成功响应** (200):
+
+```json
+{
+  "collections": [
+    {
+      "collection_id": 1,
+      "purchased_at": "2026-04-27T10:30:00.000Z",
+      "name": "爵士专辑",
+      "category": "album",
+      "image_url": "/uploads/image/jazz_album.jpg",
+      "media_url": "/uploads/media/jazz_music.mp3",
+      "description": "经典爵士乐合辑"
+    }
+  ]
+}
+```
+
+- **字段说明**:
+  - `category`: 收藏品类别（`album`、`other`、`physical`）
+  - `image_url`: 封面/预览图 URL
+  - `media_url`: 核心资源（PDF/音频/动画）URL
 
 ---
 
@@ -1051,6 +1332,239 @@ GET /api/materials/admin/materials/1/questions
 
 ---
 
+### 10. 物品管理（Items CRUD）
+
+#### 10.1 获取物品列表
+
+- **URL**: `/api/admin/items`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+- **查询参数**:
+  - `type` (可选): `food` 或 `item`
+
+- **成功响应** (200):
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "name": "魔法苹果",
+      "emoji": "🍎",
+      "type": "food",
+      "description": "回复体力的神奇苹果",
+      "recovery_value": 20,
+      "sell_price": 0,
+      "buy_price": 0,
+      "created_at": "2026-04-27T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### 10.2 获取单个物品
+
+- **URL**: `/api/admin/items/:id`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+
+#### 10.3 创建物品
+
+- **URL**: `/api/admin/items`
+- **Method**: `POST`
+- **认证**: 需要管理员Token
+- **请求体**:
+
+```json
+{
+  "name": "魔法苹果",
+  "emoji": "🍎",
+  "type": "food",
+  "description": "回复体力的神奇苹果",
+  "recovery_value": 20,
+  "sell_price": 0,
+  "buy_price": 0
+}
+```
+
+- **参数说明**:
+  - `name` (必填): 物品名称
+  - `emoji` (必填): Emoji 字符
+  - `type` (必填): `food`（恢复体力）或 `item`（可售卖）
+  - `description` (可选): 物品描述
+  - `recovery_value` (可选, 默认0): 体力恢复值（仅 food 有效）
+  - `sell_price` (可选, 默认0): 售卖获得 Coin 数（food 不可售卖则设为 0）
+  - `buy_price` (可选, 默认0): 商店买入价格
+
+#### 10.4 更新物品
+
+- **URL**: `/api/admin/items/:id`
+- **Method**: `PUT`
+- **认证**: 需要管理员Token
+- **请求体**: 同创建，所有字段可选
+
+#### 10.5 删除物品
+
+- **URL**: `/api/admin/items/:id`
+- **Method**: `DELETE`
+- **认证**: 需要管理员Token
+
+---
+
+### 11. 收藏品管理（Collections CRUD）
+
+#### 11.1 获取收藏品列表
+
+- **URL**: `/api/admin/collections`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+- **查询参数**:
+  - `category` (可选): `album`、`other`、`physical`
+
+- **成功响应** (200):
+
+```json
+{
+  "collections": [
+    {
+      "id": 1,
+      "name": "爵士专辑",
+      "category": "album",
+      "image_url": "/uploads/image/jazz_album.jpg",
+      "media_url": "/uploads/media/jazz_music.mp3",
+      "buy_price": 200,
+      "description": "经典爵士乐合辑",
+      "created_at": "2026-04-27T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### 11.2 获取单个收藏品
+
+- **URL**: `/api/admin/collections/:id`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+
+#### 11.3 创建收藏品
+
+- **URL**: `/api/admin/collections`
+- **Method**: `POST`
+- **认证**: 需要管理员Token
+- **请求体**:
+
+```json
+{
+  "name": "爵士专辑",
+  "category": "album",
+  "image_url": "/uploads/image/jazz_album.jpg",
+  "media_url": "/uploads/media/jazz_music.mp3",
+  "buy_price": 200,
+  "description": "经典爵士乐合辑"
+}
+```
+
+- **参数说明**:
+  - `name` (必填): 收藏品名称
+  - `category` (必填): `album`、`other` 或 `physical`
+  - `buy_price` (必填): 购买所需 Coin 数，≥0
+  - `image_url` (可选): 封面/预览图 URL
+  - `media_url` (可选): 核心资源 URL
+  - `description` (可选): 描述
+
+#### 11.4 更新收藏品
+
+- **URL**: `/api/admin/collections/:id`
+- **Method**: `PUT`
+- **认证**: 需要管理员Token
+- **请求体**: 同创建，所有字段可选
+
+#### 11.5 删除收藏品
+
+- **URL**: `/api/admin/collections/:id`
+- **Method**: `DELETE`
+- **认证**: 需要管理员Token
+
+---
+
+### 12. 奖励配置管理（Reward Configs CRUD）
+
+**说明**: 为素材配置掉落物品/收藏品的概率和数量。
+
+#### 12.1 获取奖励配置列表
+
+- **URL**: `/api/admin/reward-configs`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+- **查询参数**:
+  - `material_id` (可选): 按素材 ID 筛选
+
+- **成功响应** (200):
+
+```json
+{
+  "configs": [
+    {
+      "id": 1,
+      "material_id": 1,
+      "reward_type": "item",
+      "reward_id": 2,
+      "drop_rate": 30.5,
+      "min_quantity": 1,
+      "max_quantity": 3
+    }
+  ]
+}
+```
+
+#### 12.2 获取单个奖励配置
+
+- **URL**: `/api/admin/reward-configs/:id`
+- **Method**: `GET`
+- **认证**: 需要管理员Token
+
+#### 12.3 创建奖励配置
+
+- **URL**: `/api/admin/reward-configs`
+- **Method**: `POST`
+- **认证**: 需要管理员Token
+- **请求体**:
+
+```json
+{
+  "material_id": 1,
+  "reward_type": "item",
+  "reward_id": 2,
+  "drop_rate": 30.5,
+  "min_quantity": 1,
+  "max_quantity": 3
+}
+```
+
+- **参数说明**:
+  - `material_id` (必填): 关联的素材 ID（素材必须存在）
+  - `reward_type` (必填): `item` 或 `collection`
+  - `reward_id` (必填): 对应的 items 或 collections 的 ID（必须存在）
+  - `drop_rate` (必填): 掉落概率 0-100（支持小数）
+  - `min_quantity` (可选, 默认1): 最小掉落数量
+  - `max_quantity` (可选, 默认1): 最大掉落数量
+- **掉落逻辑**: 生成 0-100 随机数，若小于 `drop_rate` 则中奖，实际数量在 `min_quantity` 到 `max_quantity` 之间随机
+
+#### 12.4 更新奖励配置
+
+- **URL**: `/api/admin/reward-configs/:id`
+- **Method**: `PUT`
+- **认证**: 需要管理员Token
+- **请求体**: 同创建，所有字段可选
+
+#### 12.5 删除奖励配置
+
+- **URL**: `/api/admin/reward-configs/:id`
+- **Method**: `DELETE`
+- **认证**: 需要管理员Token
+
+---
+
 ## 🔧 文件上传接口
 
 ### 1. 文件上传
@@ -1290,12 +1804,22 @@ const API_BASE_URL =
 
 ## 📝 更新日志
 
-### 2026-04-26
+### 2026-04-27 (游戏系统重构)
 
-- 新增找回密码功能，支持通过邮箱验证码重置密码
-- 新增 `POST /api/auth/send-reset-code` 接口，向已注册邮箱发送重置验证码
-- 新增 `POST /api/auth/reset-password` 接口，通过验证码和邮箱重置密码
-- 验证码有效期为5分钟，使用独立 Redis 前缀 (`auth:reset:`) 避免与注册验证码冲突
-- 更新接口文档，增加找回密码相关接口说明
+- **体力机制**：新增体力系统，每次答题消耗 10 体力，每 5 分钟自动恢复 1 点，所有 API 请求自动同步体力
+- **答题奖励重构**：移除旧的 Coins + 冷却期奖励机制，改为基于 `material_reward_configs` 配置的掉落系统（items + collections）
+- **做题统计**：每次提交练习 `total_questions` +1，通过 `GET /api/user/stats` 获取完整统计
+- **交易系统**：
+  - `POST /api/items/sell` — 出售 items 换取 Coins
+  - `POST /api/items/use` — 使用 food 恢复体力
+  - `POST /api/shop/buy` — 使用 Coins 购买 collections
+- **背包与收藏**：
+  - `GET /api/items/inventory` — 查看背包物品
+  - `GET /api/collections/mine` — 查看已购收藏品
+- **管理员接口扩展**：
+  - `items` 完整 CRUD（`/api/admin/items`）
+  - `collections` 完整 CRUD（`/api/admin/collections`）
+  - `material_reward_configs` 完整 CRUD（`/api/admin/reward-configs`）
+- 更新接口文档，完善游戏系统各接口说明
 
 ---

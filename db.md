@@ -10,9 +10,14 @@ CREATE TABLE `users` (
 `password_hash` VARCHAR(255) NOT NULL COMMENT 'Bcrypt加密后的哈希',
 `coins` INT DEFAULT 0 COMMENT 'Coin数量', -- 取代原来的 points
 `level` ENUM('A1', 'A2', 'B1', 'B2', 'C1', 'C2') DEFAULT 'A1' COMMENT '等级',
+`total_questions` INT DEFAULT 0 COMMENT '做题总数 (点击submit的次数)' AFTER `level`,
+`stamina` INT DEFAULT 100 COMMENT '当前体力值',
+`max_stamina` INT DEFAULT 100 COMMENT '体力上限',
+`last_stamina_update` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '体力最后一次变动时间',
 `is_active` TINYINT(1) DEFAULT 0 COMMENT '邮箱是否验证成功: 0未验证, 1已验证',
 `last_practice_date` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+`role` ENUM('USER', 'ADMIN') DEFAULT 'USER'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 -- 使用 utf8mb4 以支持 Emoji 物品和头像
 
@@ -65,12 +70,61 @@ FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
 FOREIGN KEY (`material_id`) REFERENCES `materials`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- 7. 积分变动流水表
-CREATE TABLE `point_logs` (
+-- 8. 物品表 (Emoji 掉落物)
+CREATE TABLE `items` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`name` VARCHAR(50) NOT NULL,
+`emoji` VARCHAR(20) NOT NULL COMMENT 'Emoji字符',
+`type` ENUM('food', 'item') NOT NULL COMMENT 'food:恢复体力, item:可售卖物品',
+`description` TEXT COMMENT '物品描述',
+`recovery_value` INT DEFAULT 0 COMMENT '体力恢复值 (仅food有效)',
+`sell_price` INT DEFAULT 0 COMMENT '售卖获得的Coin (food不可售卖则设为0)',
+`buy_price` INT DEFAULT 0 COMMENT '商店买入价格',
+`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9. 收藏品表 (URL 资源)
+CREATE TABLE `collections` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`name` VARCHAR(100) NOT NULL,
+`category` ENUM('album', 'other', 'physical') NOT NULL,
+`image_url` VARCHAR(255) COMMENT '封面或预览图URL',
+`media_url` VARCHAR(255) COMMENT '核心资源(PDF/音频/动画)URL',
+`buy_price` INT NOT NULL DEFAULT 0,
+`description` TEXT,
+`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 10. 用户背包表 (掉落物数量)
+CREATE TABLE `user_inventory` (
 `id` INT PRIMARY KEY AUTO_INCREMENT,
 `user_id` INT NOT NULL,
-`change_amount` DECIMAL(10, 1) NOT NULL,
-`reason` VARCHAR(100) NOT NULL COMMENT '原因: A2阅读达标',
-`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
-FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+`item_id` INT NOT NULL,
+`quantity` INT DEFAULT 1,
+FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+FOREIGN KEY (`item_id`) REFERENCES `items`(`id`) ON DELETE CASCADE,
+UNIQUE KEY `idx_u_i` (`user_id`, `item_id`)
+) ENGINE=InnoDB;
+
+-- 11. 用户收藏夹表 (购买的Collections)
+CREATE TABLE `user_collections` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`user_id` INT NOT NULL,
+`collection_id` INT NOT NULL,
+`purchased_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+FOREIGN KEY (`collection_id`) REFERENCES `collections`(`id`) ON DELETE CASCADE,
+UNIQUE KEY `idx_u_c` (`user_id`, `collection_id`)
+) ENGINE=InnoDB;
+
+-- 12. 素材奖励配置表 (掉落概率)
+CREATE TABLE `material_reward_configs` (
+`id` INT PRIMARY KEY AUTO_INCREMENT,
+`material_id` INT NOT NULL COMMENT '关联的素材ID',
+`reward_type` ENUM('item', 'collection') NOT NULL COMMENT '奖励类型',
+`reward_id` INT NOT NULL COMMENT '对应的 items 或 collections 的 ID',
+`drop_rate` DECIMAL(5, 2) NOT NULL COMMENT '掉落概率 (0-100.00)',
+`min_quantity` INT DEFAULT 1 COMMENT '最小掉落数量',
+`max_quantity` INT DEFAULT 1 COMMENT '最大掉落数量',
+FOREIGN KEY (`material_id`) REFERENCES `materials`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
