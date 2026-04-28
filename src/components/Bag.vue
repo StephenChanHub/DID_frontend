@@ -1,32 +1,128 @@
 <template>
   <section class="bag-panel">
-    <div class="grid">
-      <article v-for="item in items" :key="item.id" class="card">
+    <div v-if="loading" class="loading-state">Loading...</div>
+    <div v-else-if="filteredItems.length === 0" class="empty-state">No items here yet.</div>
+    <div v-else class="grid">
+      <article
+        v-for="item in filteredItems"
+        :key="item.item_id"
+        class="card"
+        @click="openDetail(item)"
+      >
         <div class="thumb">{{ item.emoji }}</div>
         <div class="cardBody">
           <h3 class="title">{{ item.name }}</h3>
-          <p class="desc">{{ item.desc }}</p>
+          <div class="meta-row">
+            <span v-if="item.type === 'food' && item.recovery_value" class="tag recovery">
+              +{{ item.recovery_value }} STA
+            </span>
+            <span v-if="item.sell_price" class="tag sell">
+              {{ item.sell_price }} Coin
+            </span>
+          </div>
         </div>
+        <span class="qty-badge">x{{ item.quantity }}</span>
       </article>
     </div>
+
+    <ItemDetailModal
+      :visible="detailVisible"
+      :item="selectedItem"
+      mode="bag"
+      @cancel="detailVisible = false"
+      @use="handleUse"
+      @sell="handleSell"
+    />
   </section>
 </template>
 
-<script setup>
-const items = [
-  { id: 1, emoji: '🎒', name: 'Backpack', desc: 'Carry your essentials' },
-  { id: 2, emoji: '👝', name: 'Pouch', desc: 'Small storage' },
-  { id: 3, emoji: '💼', name: 'Briefcase', desc: 'Professional carry' },
-  { id: 4, emoji: '🧳', name: 'Luggage', desc: 'Travel companion' },
-  { id: 5, emoji: '👜', name: 'Handbag', desc: 'Everyday style' },
-  { id: 6, emoji: '🎒', name: 'Daypack', desc: 'Light & compact' },
-  { id: 7, emoji: '👛', name: 'Wallet', desc: 'Keep your coins' },
-  { id: 8, emoji: '🧰', name: 'Toolbox', desc: 'Gear & tools' },
-  { id: 9, emoji: '📦', name: 'Box', desc: 'Storage container' },
-  { id: 10, emoji: '🧺', name: 'Basket', desc: 'Woven carry' },
-  { id: 11, emoji: '🪣', name: 'Bucket', desc: 'Waterproof bin' },
-  { id: 12, emoji: '🎁', name: 'Gift Bag', desc: 'Present wrap' },
-]
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue';
+import request from '@/api/request';
+import { useUserStore } from '@/store/user';
+import ItemDetailModal from '@/components/ItemDetailModal.vue';
+
+const props = defineProps<{
+  filter: 'all' | 'food' | 'items';
+}>();
+
+const userStore = useUserStore();
+
+interface InventoryItem {
+  item_id: number;
+  quantity: number;
+  name: string;
+  emoji: string;
+  type: string;
+  description: string;
+  recovery_value: number;
+  sell_price: number;
+}
+
+const items = ref<InventoryItem[]>([]);
+const loading = ref(false);
+
+const filteredItems = computed(() => {
+  if (props.filter === 'all') return items.value;
+  const type = props.filter === 'items' ? 'item' : props.filter;
+  return items.value.filter(item => item.type === type);
+});
+
+const detailVisible = ref(false);
+const selectedItem = ref<InventoryItem>({
+  item_id: 0,
+  quantity: 0,
+  name: '',
+  emoji: '',
+  type: 'item',
+  description: '',
+  recovery_value: 0,
+  sell_price: 0
+});
+
+const openDetail = (item: InventoryItem) => {
+  selectedItem.value = { ...item };
+  detailVisible.value = true;
+};
+
+const fetchInventory = async () => {
+  if (!userStore.isLoggedIn) return;
+  loading.value = true;
+  try {
+    const res: any = await request.get('/items/inventory');
+    items.value = Array.isArray(res.items) ? res.items : [];
+  } catch (err) {
+    console.error('Failed to fetch inventory', err);
+    items.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleUse = async (itemId: number, quantity: number) => {
+  try {
+    const res: any = await request.post('/items/use', { itemId, quantity });
+    userStore.updateStamina(res.stamina, res.maxStamina);
+    detailVisible.value = false;
+    await fetchInventory();
+  } catch (err) {
+    console.error('Use item failed', err);
+  }
+};
+
+const handleSell = async (itemId: number, quantity: number) => {
+  try {
+    const res: any = await request.post('/items/sell', { itemId, quantity });
+    userStore.updateCoins(res.coins);
+    detailVisible.value = false;
+    await fetchInventory();
+  } catch (err) {
+    console.error('Sell item failed', err);
+  }
+};
+
+onMounted(fetchInventory);
+watch(() => userStore.isLoggedIn, (v) => { if (v) fetchInventory(); });
 </script>
 
 <style scoped>
@@ -45,16 +141,18 @@ const items = [
 }
 
 .card {
-  min-height: 170px;
+  min-height: 150px;
   border-right: 1px solid rgba(255, 255, 255, 0.3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 18px 12px;
+  padding: 14px 8px;
   box-sizing: border-box;
   transition: background 0.2s;
+  cursor: pointer;
+  position: relative;
 }
 
 .card:nth-child(6n) {
@@ -66,32 +164,70 @@ const items = [
 }
 
 .thumb {
-  width: 48px;
-  height: 48px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
-  font-size: 26px;
+  margin-bottom: 10px;
+  font-size: 24px;
   color: var(--primary-color);
 }
 
 .title {
   margin: 0;
-  font-size: 20px;
+  font-size: 16px;
   color: black;
   font-weight: 500;
   text-align: center;
 }
 
-.desc {
-  margin: 8px 0 0;
-  font-size: 14px;
-  color: black;
-  opacity: 0.7;
+.meta-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.tag.recovery {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+
+.tag.sell {
+  background: rgba(255, 152, 0, 0.15);
+  color: #f90;
+}
+
+.qty-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--primary-color);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 20px;
   text-align: center;
+}
+
+.loading-state,
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #606a77;
+  font-size: 0.95rem;
 }
 
 @media (max-width: 768px) {
@@ -108,23 +244,19 @@ const items = [
   }
 
   .card {
-    min-height: 140px;
-    padding: 12px 8px;
+    min-height: 120px;
+    padding: 10px 6px;
   }
 
   .thumb {
     width: 36px;
     height: 36px;
     font-size: 20px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
   .title {
-    font-size: 16px;
-  }
-
-  .desc {
-    font-size: 12px;
+    font-size: 13px;
   }
 }
 </style>

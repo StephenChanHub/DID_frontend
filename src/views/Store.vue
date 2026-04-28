@@ -4,35 +4,53 @@
       <header class="topbar">
         <div class="Wrap">
           <img class="Salesperson" :src="`/public/Salesperson0${salesperson}.png`" alt="salesperson" />
-          <span class="Text">{{ mode === 'buy' ? 'Welcome to the DID Store! What do you need?' : 'Welcome to the DID Store! What do you want to sell?' }}</span>
+          <span class="Text">{{ mode === 'buy' ? 'Welcome to the DID Store! What do you need?' : 'Welcome! What do you want to sell?' }}</span>
         </div>
 
         <div class="actionGroup">
-          <button class="actionBtn" :class="{ primary: mode === 'buy' }" @click="mode = 'buy'">buy</button>
-          <button class="actionBtn" :class="{ primary: mode === 'sell' }" @click="mode = 'sell'">sell</button>
+          <button class="actionBtn" :class="{ primary: mode === 'buy' }" @click="switchMode('buy')">buy</button>
+          <button class="actionBtn" :class="{ primary: mode === 'sell' }" @click="switchMode('sell')">sell</button>
         </div>
       </header>
 
-      <main class="content">
-        <aside class="sidebar">
+      <main class="content" :class="{ noSidebar: mode === 'sell' }">
+        <aside v-if="mode === 'buy'" class="sidebar">
           <button
-            v-for="item in categories"
-            :key="item"
+            v-for="cat in categories"
+            :key="cat.value"
             class="categoryBtn"
-            :class="{ active: selectedCategory === item }"
-            @click="selectedCategory = item"
+            :class="{ active: selectedCategory === cat.value }"
+            @click="selectedCategory = cat.value"
           >
-            {{ item }}
+            {{ cat.label }}
           </button>
         </aside>
 
         <section class="productPanel">
-          <div class="grid">
-            <article v-for="item in filteredProducts" :key="item.id" class="card">
-              <div class="thumb">{{ item.emoji }}</div>
+          <div v-if="loading" class="loading-state">Loading...</div>
+          <div v-else-if="filteredProducts.length === 0" class="empty-state">
+            {{ mode === 'buy' ? 'Nothing available for purchase right now.' : 'No items to sell.' }}
+          </div>
+          <div v-else class="grid">
+            <article
+              v-for="item in filteredProducts"
+              :key="item.uid"
+              class="card"
+              @click="openDetail(item)"
+            >
+              <div class="thumb">
+                <img
+                  v-if="item._isCollection && item.image_url"
+                  :src="buildFileUrl(item.image_url) || undefined"
+                  :alt="item.name"
+                  class="thumb-img"
+                />
+                <span v-else>{{ item.emoji || '📀' }}</span>
+              </div>
               <div class="cardBody">
                 <h3 class="title">{{ item.name }}</h3>
-                <p class="desc">{{ item.desc }}</p>
+                <p v-if="mode === 'buy'" class="desc">{{ item.buy_price }} Coins</p>
+                <p v-else class="desc">x{{ item.quantity }} · {{ item.sell_price }} Coin each</p>
               </div>
             </article>
           </div>
@@ -41,48 +59,209 @@
 
       <button class="backBtn" @click="goBack">← back</button>
     </div>
+
+    <ItemDetailModal
+      :visible="detailVisible"
+      :item="selectedItem"
+      mode="store"
+      :store-sub-mode="mode"
+      @cancel="detailVisible = false"
+      @buy="handleBuy"
+      @sell="handleSellItem"
+    />
   </div>
 </template>
 
-<script setup>
-import { computed, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUserStore } from '@/store/user'
+<script setup lang="ts">
+import { computed, ref, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { useUserStore } from '@/store/user';
+import request from '@/api/request';
+import ItemDetailModal from '@/components/ItemDetailModal.vue';
+import { buildFileUrl } from '@/config/env';
 
-const router = useRouter()
-const userStore = useUserStore()
-const goBack = () => router.back()
+const router = useRouter();
+const userStore = useUserStore();
+const goBack = () => router.back();
 
 onMounted(() => {
   if (!userStore.isLoggedIn) {
-    userStore.showAuthModal = true
+    userStore.showAuthModal = true;
   }
-})
+  fetchProducts();
+});
 
-const salesperson = ref(Math.floor(Math.random() * 3) + 1)
-const mode = ref('buy')
-const selectedCategory = ref('food')
+const salesperson = ref(Math.floor(Math.random() * 3) + 1);
+const mode = ref<'buy' | 'sell'>('buy');
+const selectedCategory = ref('food');
+const loading = ref(false);
 
-const categories = ['food', 'collections']
+const categories = [
+  { value: 'food', label: 'food' },
+  { value: 'collections', label: 'collections' }
+];
 
-const products = ref([
-  { id: 2, category: 'collections', emoji: '🎒', name: 'Backpack', desc: 'Carry your essentials' },
-   { id: 1, category: 'food', emoji: '🍎', name: 'Apple', desc: 'Fresh and sweet' },
-  { id: 2, category: 'food', emoji: '👝', name: 'Pouch', desc: 'Small storage' },
-  { id: 3, category: 'food', emoji: '💼', name: 'Briefcase', desc: 'Professional carry' },
-  { id: 4, category: 'food', emoji: '🧳', name: 'Luggage', desc: 'Travel companion' },
-  { id: 5, category: 'food', emoji: '👜', name: 'Handbag', desc: 'Everyday style' },
-  { id: 6, category: 'food', emoji: '🎒', name: 'Daypack', desc: 'Light & compact' },
-  { id: 7, category: 'food', emoji: '👛', name: 'Wallet', desc: 'Keep your coins' },
-  { id: 8, category: 'food', emoji: '🧰', name: 'Toolbox', desc: 'Gear & tools' },
-  { id: 9, category: 'food', emoji: '📦', name: 'Box', desc: 'Storage container' },
-  { id: 10, category: 'food', emoji: '🧺', name: 'Basket', desc: 'Woven carry' },
-  { id: 11, category: 'food', emoji: '🪣', name: 'Bucket', desc:'Waterproof bin' },
-])
+// 所有可购买的商品
+const buyItems = ref<any[]>([]);
+const buyCollections = ref<any[]>([]);
+
+// 用户可出售的物品
+const sellItems = ref<any[]>([]);
+
+// 产品列表（统一格式）
+interface ProductItem {
+  uid: string;
+  _isCollection: boolean;
+  id: number;
+  name: string;
+  emoji: string;
+  description: string;
+  buy_price: number;
+  sell_price: number;
+  image_url?: string;
+  media_url?: string;
+  type?: string;
+  quantity?: number;
+  recovery_value?: number;
+}
+
+const products = computed<ProductItem[]>(() => {
+  if (mode.value === 'buy') {
+    const items: ProductItem[] = buyItems.value
+      .filter((i: any) => i.buy_price > 0)
+      .map((i: any) => ({
+        uid: `item-${i.id}`,
+        _isCollection: false,
+        id: i.id,
+        name: i.name,
+        emoji: i.emoji,
+        description: i.description || '',
+        buy_price: i.buy_price,
+        sell_price: i.sell_price || 0,
+        type: i.type,
+        recovery_value: i.recovery_value || 0
+      }));
+    const cols: ProductItem[] = buyCollections.value
+      .filter((c: any) => c.buy_price > 0)
+      .map((c: any) => ({
+        uid: `col-${c.id}`,
+        _isCollection: true,
+        id: c.id,
+        name: c.name,
+        emoji: '',
+        description: c.description || '',
+        buy_price: c.buy_price,
+        sell_price: 0,
+        image_url: c.image_url,
+        media_url: c.media_url
+      }));
+    return [...items, ...cols];
+  }
+  return sellItems.value
+    .filter((i: any) => i.type === 'item' && i.sell_price > 0)
+    .map((i: any) => ({
+      uid: `sell-${i.item_id}`,
+      _isCollection: false,
+      id: i.item_id,
+      name: i.name,
+      emoji: i.emoji,
+      description: i.description || '',
+      buy_price: 0,
+      sell_price: i.sell_price,
+      quantity: i.quantity,
+      type: i.type
+    }));
+});
 
 const filteredProducts = computed(() => {
-  return products.value.filter((item) => item.category === selectedCategory.value)
-})
+  if (mode.value === 'sell') return products.value;
+  if (selectedCategory.value === 'food') {
+    return products.value.filter(p => !p._isCollection);
+  }
+  return products.value.filter(p => p._isCollection);
+});
+
+// 详情弹窗
+const detailVisible = ref(false);
+const selectedItem = ref<ProductItem>({
+  uid: '',
+  _isCollection: false,
+  id: 0,
+  name: '',
+  emoji: '',
+  description: '',
+  buy_price: 0,
+  sell_price: 0
+});
+
+const openDetail = (item: ProductItem) => {
+  selectedItem.value = { ...item };
+  detailVisible.value = true;
+};
+
+const switchMode = (m: 'buy' | 'sell') => {
+  mode.value = m;
+  if (m === 'buy') {
+    selectedCategory.value = 'food';
+  }
+  fetchProducts();
+};
+
+const fetchProducts = async () => {
+  loading.value = true;
+  try {
+    if (mode.value === 'buy') {
+      const [itemsRes, colsRes] = await Promise.all([
+        request.get('/admin/items', { params: { type: 'food' } }).catch(() => ({ items: [] })),
+        request.get('/admin/collections').catch(() => ({ collections: [] }))
+      ]);
+      buyItems.value = (itemsRes as any)?.items || [];
+      buyCollections.value = (colsRes as any)?.collections || [];
+    } else {
+      const res: any = await request.get('/items/inventory');
+      sellItems.value = Array.isArray(res.items) ? res.items : [];
+    }
+  } catch (err) {
+    console.error('Failed to fetch products', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleBuy = async (itemId: number, quantity: number) => {
+  const item = selectedItem.value;
+  try {
+    if (item._isCollection) {
+      const res: any = await request.post('/shop/buy', { collectionId: itemId });
+      userStore.updateCoins(res.coins);
+    } else {
+      const res: any = await request.post('/shop/buy', { itemId, quantity });
+      userStore.updateCoins(res.coins);
+    }
+    detailVisible.value = false;
+    await fetchProducts();
+    // Refresh user stats
+    const statsRes: any = await request.get('/user/stats');
+    if (statsRes) {
+      userStore.updateCoins(statsRes.coins);
+    }
+  } catch (err) {
+    console.error('Buy failed', err);
+  }
+};
+
+const handleSellItem = async (itemId: number, quantity: number) => {
+  try {
+    const res: any = await request.post('/items/sell', { itemId, quantity });
+    userStore.updateCoins(res.coins);
+    detailVisible.value = false;
+    await fetchProducts();
+  } catch (err) {
+    console.error('Sell failed', err);
+  }
+};
+
+watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
 </script>
 
 <style scoped>
@@ -200,6 +379,10 @@ const filteredProducts = computed(() => {
   gap: 24px;
 }
 
+.content.noSidebar {
+  grid-template-columns: 1fr;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -270,6 +453,7 @@ const filteredProducts = computed(() => {
   padding: 18px 12px;
   box-sizing: border-box;
   transition: background 0.2s;
+  cursor: pointer;
 }
 
 .card:hover {
@@ -279,7 +463,6 @@ const filteredProducts = computed(() => {
 .thumb {
   width: 48px;
   height: 48px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -287,6 +470,13 @@ const filteredProducts = computed(() => {
   margin-bottom: 16px;
   font-size: 26px;
   color: var(--primary-color);
+  overflow: hidden;
+}
+
+.thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .title {
@@ -303,6 +493,14 @@ const filteredProducts = computed(() => {
   color: black;
   opacity: 0.7;
   text-align: center;
+}
+
+.loading-state,
+.empty-state {
+  padding: 60px 24px;
+  text-align: center;
+  color: #606a77;
+  font-size: 0.95rem;
 }
 
 .backBtn {
@@ -378,8 +576,8 @@ const filteredProducts = computed(() => {
 
   .categoryBtn {
     flex: 1 1 120px;
-    min-height: 56px;
-    font-size: 20px;
+    min-height: 44px;
+    font-size: 18px;
   }
 
   .Wrap {

@@ -843,14 +843,14 @@ GET /api/materials/1
 
 ---
 
-### 5. 购买收藏品
+### 5. 商店购买
 
-**使用 Coins 购买收藏品**
+**使用 Coins 购买收藏品或食物物品**
 
 - **URL**: `/api/shop/buy`
 - **Method**: `POST`
 - **认证**: 需要用户Token
-- **请求体**:
+- **请求体（购买收藏品）**:
 
 ```json
 {
@@ -858,11 +858,21 @@ GET /api/materials/1
 }
 ```
 
-- **约束**:
-  - Coins 余额必须足够
-  - 不能重复购买已拥有的收藏品
+- **请求体（购买食物物品）**:
 
-- **成功响应** (200):
+```json
+{
+  "itemId": 1,
+  "quantity": 3
+}
+```
+
+- **约束**:
+  - `collectionId` 和 `itemId` 不能同时提供
+  - **收藏品**：Coins 余额必须足够，不能重复购买已拥有的收藏品
+  - **食物物品**：仅 `food` 类型可购买，`buy_price` 必须 > 0，Coins 余额必须足够
+
+- **成功响应（购买收藏品）** (200):
 
 ```json
 {
@@ -877,8 +887,25 @@ GET /api/materials/1
 }
 ```
 
+- **成功响应（购买食物物品）** (200):
+
+```json
+{
+  "message": "成功购买 3 个 魔法苹果",
+  "coins": 50,
+  "item": {
+    "id": 1,
+    "name": "魔法苹果",
+    "emoji": "🍎",
+    "type": "food",
+    "quantity": 3
+  }
+}
+```
+
 - **错误响应**:
-  - 400: 收藏品不存在、已拥有该收藏品、Coins 不足
+  - 400: 收藏品不存在、已拥有该收藏品、Coins 不足、物品不可购买（非 food 类型或 buy_price 为 0）
+  - 404: 收藏品/物品不存在
   - 500: 服务器内部错误
 
 ---
@@ -1804,22 +1831,11 @@ const API_BASE_URL =
 
 ## 📝 更新日志
 
-### 2026-04-27 (游戏系统重构)
+### 2026-04-28
 
-- **体力机制**：新增体力系统，每次答题消耗 10 体力，每 5 分钟自动恢复 1 点，所有 API 请求自动同步体力
-- **答题奖励重构**：移除旧的 Coins + 冷却期奖励机制，改为基于 `material_reward_configs` 配置的掉落系统（items + collections）
-- **做题统计**：每次提交练习 `total_questions` +1，通过 `GET /api/user/stats` 获取完整统计
-- **交易系统**：
-  - `POST /api/items/sell` — 出售 items 换取 Coins
-  - `POST /api/items/use` — 使用 food 恢复体力
-  - `POST /api/shop/buy` — 使用 Coins 购买 collections
-- **背包与收藏**：
-  - `GET /api/items/inventory` — 查看背包物品
-  - `GET /api/collections/mine` — 查看已购收藏品
-- **管理员接口扩展**：
-  - `items` 完整 CRUD（`/api/admin/items`）
-  - `collections` 完整 CRUD（`/api/admin/collections`）
-  - `material_reward_configs` 完整 CRUD（`/api/admin/reward-configs`）
-- 更新接口文档，完善游戏系统各接口说明
+- **商店接口扩展**：`POST /api/shop/buy` 现在同时支持购买食物物品（`itemId` + `quantity`）
+- 仅 `food` 类型物品可被购买（`item` 类型只能出售，不可购买）
+- 更新 `items` 表的 `buy_price` 字段生效：food 物品可通过商店使用 Coins 购买
+- 更新接口文档，完善商店购买接口说明
 
 ---

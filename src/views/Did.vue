@@ -23,6 +23,13 @@
             <img src="/coin.png" alt="Coin" class="coin">
             <span class="points-tag">{{ userStore.coins }}</span>
           </div>
+          <!-- 体力条 -->
+          <div class="stamina-row">
+            <div class="stamina-bar-bg">
+              <div class="stamina-bar-fill" :style="{ width: staminaPercent + '%' }"></div>
+            </div>
+            <span class="stamina-text">STA {{ userStore.stamina }}/{{ userStore.maxStamina }}</span>
+          </div>
         </div>
       </div>
 
@@ -30,8 +37,8 @@
       <div class="profile-second-row">
         <button class="edit-btn" @click="handleEditProfile">Edit</button>
         <div class="exercise-count">
-          <span class="count-label">做题数</span>
-          <span class="count-value">{{ userStore.exerciseCount || 0 }}</span>
+          <span class="count-label">practiced</span>
+          <span class="count-value">{{ userStore.totalQuestions || 0 }}</span>
         </div>
       </div>
 
@@ -54,12 +61,12 @@
             <span class="dropdown-arrow">▾</span>
           </div>
           <div v-if="showBagDropdown" class="dropdown-menu">
-            <div class="dropdown-item" :class="{ selected: bagSubTab === 'bag' }" @click="selectBagSubTab('bag')">bag</div>
+            <div class="dropdown-item" :class="{ selected: bagSubTab === 'all' }" @click="selectBagSubTab('all')">bag</div>
             <div class="dropdown-item" :class="{ selected: bagSubTab === 'food' }" @click="selectBagSubTab('food')">food</div>
             <div class="dropdown-item" :class="{ selected: bagSubTab === 'items' }" @click="selectBagSubTab('items')">items</div>
           </div>
         </div>
-        <div class="did-nav-item" :class="{ active: activeTab === 'albums' }" @click="switchTab('albums')">
+        <div class="did-nav-item" :class="{ active: activeTab === 'collections' }" @click="switchTab('collections')">
           <span class="nav-label">Collections</span>
         </div>
       </div>
@@ -88,13 +95,11 @@
         </div>
 
         <div v-else-if="activeTab === 'bag'" class="bag-content">
-          <Bag v-if="bagSubTab === 'bag'" />
-          <div v-else-if="bagSubTab === 'food'" class="placeholder-content">Food 功能建设中</div>
-          <div v-else class="placeholder-content">Items 功能建设中</div>
+          <Bag :filter="bagSubTab" />
         </div>
 
-        <div v-else class="placeholder-content">
-          Albums 功能建设中
+        <div v-else-if="activeTab === 'collections'" class="collections-content">
+          <Collections />
         </div>
       </div>
 
@@ -109,20 +114,26 @@ import { useUserStore } from '@/store/user';
 import { useThemeStore } from '@/store/theme';
 import request from '@/api/request';
 import Bag from '@/components/Bag.vue';
+import Collections from '@/components/Collections.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
 const themeStore = useThemeStore();
 const favoriteMaterials = ref<any[]>([]);
 
+// 体力百分比
+const staminaPercent = computed(() =>
+  Math.min(100, Math.max(0, (userStore.stamina / userStore.maxStamina) * 100))
+);
+
 // 当前激活的标签页
-const activeTab = ref<'bookmark' | 'bag' | 'albums'>('bookmark');
+const activeTab = ref<'bookmark' | 'bag' | 'collections'>('bookmark');
 
 // 收藏筛选
 const bookmarkFilter = ref<'all' | 'listening' | 'reading'>('all');
 
 // Bag 子标签
-const bagSubTab = ref<'bag' | 'food' | 'items'>('bag');
+const bagSubTab = ref<'all' | 'food' | 'items'>('all');
 
 // 下拉菜单状态
 const showBookmarkDropdown = ref(false);
@@ -149,8 +160,25 @@ const fetchFavoriteMaterials = async () => {
   }
 };
 
+// 同步用户状态数据
+const syncUserStats = async () => {
+  if (!userStore.isLoggedIn) return;
+  try {
+    const res: any = await request.get('/user/stats');
+    if (res) {
+      userStore.updateStamina(res.stamina, res.maxStamina);
+      userStore.updateCoins(res.coins);
+      if (typeof res.totalQuestions === 'number') {
+        userStore.updateTotalQuestions(res.totalQuestions);
+      }
+    }
+  } catch (err) {
+    console.error('Sync user stats failed', err);
+  }
+};
+
 // 切换标签页
-const switchTab = (tab: 'bookmark' | 'bag' | 'albums') => {
+const switchTab = (tab: 'bookmark' | 'bag' | 'collections') => {
   activeTab.value = tab;
   showBookmarkDropdown.value = false;
   showBagDropdown.value = false;
@@ -178,7 +206,7 @@ const toggleBagDropdown = () => {
   showBagDropdown.value = !showBagDropdown.value;
 };
 
-const selectBagSubTab = (tab: 'bag' | 'food' | 'items') => {
+const selectBagSubTab = (tab: 'all' | 'food' | 'items') => {
   bagSubTab.value = tab;
   showBagDropdown.value = false;
 };
@@ -211,6 +239,7 @@ const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().le
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
   fetchFavoriteMaterials();
+  syncUserStats();
 });
 
 onUnmounted(() => {
@@ -220,6 +249,7 @@ onUnmounted(() => {
 watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   if (isLoggedIn) {
     fetchFavoriteMaterials();
+    syncUserStats();
   } else {
     favoriteMaterials.value = [];
   }
@@ -369,6 +399,37 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   font-size: 16px;
 }
 
+/* 体力条 */
+.stamina-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.stamina-bar-bg {
+  flex: 1;
+  max-width: 180px;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.stamina-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  transition: width 0.5s ease;
+}
+
+.stamina-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #666;
+  white-space: nowrap;
+}
+
 /* 第二行：edit按钮和做题数 */
 .profile-second-row {
   display: flex;
@@ -376,8 +437,6 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   justify-content: space-between;
   margin-bottom: 30px;
   padding: 15px 0;
-  /* border-top: 1px solid rgba(0, 0, 0, 0.1); */
-  /* border-bottom: 1px solid rgba(0, 0, 0, 0.1); */
 }
 
 .edit-btn {
@@ -437,8 +496,6 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
 }
 
 .did-nav-item:hover {
-  /* background: var(--primary-color); */
-  /* color: white; */
   transform: translateY(-2px);
   border-color: var(--primary-color);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
@@ -505,16 +562,10 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   color: white;
 }
 
-.bag-content {
+.bag-content,
+.collections-content {
   width: 100%;
 }
-
-
-
-/* .nav-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
-} */
 
 .nav-label {
   font-size: 14px;
@@ -624,20 +675,16 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
     font-size: 1.3rem;
   }
 
+  .stamina-bar-bg {
+    max-width: 120px;
+  }
+
   .navigation-tabs {
     gap: 8px;
   }
 
-  .nav-item {
-    padding: 12px 8px;
-  }
-
-  .nav-icon {
-    font-size: 20px;
-  }
-
   .nav-label {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .nickname-row {
@@ -647,57 +694,70 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
 
 @media (max-width: 480px) {
   .profile-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+    gap: 12px;
   }
 
-  .profile-info {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  .avatar-large {
+    width: 56px;
+    height: 56px;
+    font-size: 20px;
+  }
+
+  .nickname {
+    margin-right: auto;
+    font-size: 1.2rem;
   }
 
   .level-coin-row {
-    justify-content: center;
+    gap: 6px;
+  }
+
+  .level-tag {
+    padding: 3px 10px;
+    font-size: 12px;
+  }
+
+  .points-tag {
+    font-size: 14px;
+  }
+
+  .stamina-row {
+    gap: 6px;
+  }
+
+  .stamina-bar-bg {
+    max-width: 100px;
+  }
+
+  .stamina-text {
+    font-size: 10px;
   }
 
   .profile-second-row {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
+    padding: 12px 0;
   }
 
-  .exercise-count {
-    align-items: flex-start;
+  .edit-btn {
+    padding: 6px 16px;
+    font-size: 13px;
+  }
+
+  .count-value {
+    font-size: 20px;
   }
 
   .navigation-tabs {
-    flex-direction: row;
-    gap: 8px;
+    gap: 6px;
   }
 
-  .nav-item {
-    flex: 1;
-    padding: 12px 8px;
-    border-radius: 16px;
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-  }
-
-  .nav-icon {
-    font-size: 20px;
-    margin-bottom: 6px;
+  .did-nav-item {
+    padding: 12px 6px;
+    border-radius: 14px;
   }
 
   .nav-label {
     font-size: 12px;
     font-weight: 500;
-  }
-
-  .nickname-row {
-    justify-content: center;
   }
 }
 </style>

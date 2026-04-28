@@ -85,6 +85,15 @@
       <button @click="refresh" class="side-btn refresh-btn">🔄</button>
       <button @click="goBack" class="side-btn back-btn">↩️</button>
     </aside>
+
+    <RewardModal
+      :visible="rewardVisible"
+      :is-passed="rewardData.isPassed"
+      :correct-count="rewardData.correctCount"
+      :total-questions="rewardData.totalQuestions"
+      :drops="rewardData.drops"
+      @close="rewardVisible = false"
+    />
   </div>
 </template>
 
@@ -93,9 +102,12 @@ import { ref, onMounted, reactive, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import request from '@/api/request';
 import Player from '@/components/Player.vue';
+import RewardModal from '@/components/RewardModal.vue';
+import { useUserStore } from '@/store/user';
 import { buildFileUrl } from '@/config/env';
 const router = useRouter();
 const route = useRoute();
+const userStore = useUserStore();
 const scroller = ref<HTMLElement | null>(null);
 let intersectionObserver: IntersectionObserver | null = null;
 
@@ -105,6 +117,15 @@ const activeCards = reactive<Record<number, boolean>>({}); // 存储卡片激活
 const showResult = ref(false);
 const favoriteCards = reactive<Record<number, boolean>>({}); // 存储收藏状态
 const answerResults = ref<Record<number, any>>({}); // 存储提交后的答案结果（来自后端）
+
+// 奖励弹窗状态
+const rewardVisible = ref(false);
+const rewardData = ref({
+  isPassed: false,
+  correctCount: 0,
+  totalQuestions: 0,
+  drops: [] as any[]
+});
 
 const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
 
@@ -260,15 +281,27 @@ const handleSubmit = async (materialId: number) => {
   try {
     const res: any = await request.post('/practice/submit', payload);
     showResult.value = true;
-    alert(res.message);
 
     // 保存答案结果，用于显示反馈
     if (res.answerDetails) {
       res.answerDetails.forEach((detail: any) => {
         answerResults.value[detail.qId] = detail;
       });
-      console.log('[handleSubmit] answerResults:', answerResults.value);
     }
+
+    // 更新用户体力
+    if (typeof res.stamina === 'number') {
+      userStore.updateStamina(res.stamina);
+    }
+
+    // 显示奖励弹窗
+    rewardData.value = {
+      isPassed: !!res.isPassed,
+      correctCount: res.correctCount ?? 0,
+      totalQuestions: res.totalQuestions ?? 0,
+      drops: Array.isArray(res.drops) ? res.drops : []
+    };
+    rewardVisible.value = true;
   } catch (err) {
     console.error('提交失败', err);
   }
