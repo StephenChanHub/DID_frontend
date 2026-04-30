@@ -1,4 +1,14 @@
 import axios from 'axios';
+import { useUserStore } from '@/store/user';
+
+const SAFE_ERROR_MESSAGE: Record<number, string> = {
+  400: '请求参数错误，请检查后重试',
+  401: '登录已失效，请重新登录',
+  403: '暂无权限执行该操作',
+  404: '请求资源不存在',
+  429: '请求过于频繁，请稍后再试',
+  500: '服务器开小差了，请稍后再试'
+};
 
 const request = axios.create({
   baseURL: '/api', // 使用代理配置，开发环境通过vite代理转发
@@ -27,12 +37,17 @@ request.interceptors.response.use(
       return Promise.reject(err);
     }
 
-    const { status, data, headers } = err.response;
-    const msg = data?.message || '未知错误';
+    const { status, headers } = err.response;
+    const msg = SAFE_ERROR_MESSAGE[status] || '请求失败，请稍后重试';
 
     if (status === 401) {
       alert('登录失效：' + msg);
-      localStorage.removeItem('did_token');
+      try {
+        const userStore = useUserStore();
+        userStore.clearSensitiveState();
+      } catch {
+        localStorage.removeItem('did_token');
+      }
     } else if (status === 429) {
       const retryAfter = parseInt(headers['retry-after']) || 60;
       err.retryAfter = retryAfter;

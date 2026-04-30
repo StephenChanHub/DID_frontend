@@ -8,13 +8,18 @@ const routes = [
     name: 'Did',
     component: () => import('@/views/Did.vue')
   },
-  { path: '/store', name: 'Store', component: () => import('@/views/Store.vue'), meta: { hideLayout: true } },
+  {
+    path: '/store',
+    name: 'Store',
+    component: () => import('@/views/Store.vue'),
+    meta: { hideLayout: true, requiresAuth: true }
+  },
   { path: '/preview', name: 'Preview', component: () => import('@/views/Preview.vue') },
   {
     path: '/practice/:id',
     name: 'Practice',
     component: () => import('@/views/Practice.vue'),
-    meta: { hideLayout: true }
+    meta: { hideLayout: true, requiresAuth: true }
   }
 ];
 
@@ -23,7 +28,15 @@ const router = createRouter({
   routes
 });
 
-// 移除认证守卫，DID 页面可公开访问
-// 如果需要路由级认证，可在此处添加
+router.beforeEach((to, _from, next) => {
+  if (!to.meta?.requiresAuth) {
+    return next();
+  }
+  const token = localStorage.getItem('did_token');
+  if (token) {
+    return next();
+  }
+  next('/do');
+});
 
 export default router;

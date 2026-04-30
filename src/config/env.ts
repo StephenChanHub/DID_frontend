@@ -15,8 +15,22 @@ export const API_BASE_URL =
 export const buildFileUrl = (url: string | null | undefined): string | null => {
   if (!url) return null;
 
+  if (url.startsWith('javascript:') || url.startsWith('data:')) {
+    return null;
+  }
+
   // 如果已经是完整的 URL，直接返回
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    const trustedHosts = [
+      window.location.host,
+      new URL(API_BASE_URL, window.location.origin).host
+    ];
+    try {
+      const parsed = new URL(url);
+      if (!trustedHosts.includes(parsed.host)) return null;
+    } catch {
+      return null;
+    }
     return url;
   }
 

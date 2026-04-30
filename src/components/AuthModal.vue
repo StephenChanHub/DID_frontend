@@ -13,6 +13,7 @@
       </div>
 
       <form @submit.prevent="isLogin ? handleLogin() : handleRegister()">
+        <input v-model="trapField" type="text" tabindex="-1" autocomplete="off" class="hp-field" aria-hidden="true" />
         <input v-model="form.email" type="email" placeholder="Email" required />
 
         <div v-if="!isLogin" class="code-row">
@@ -52,6 +53,8 @@ const isLogin = ref(true);
 const loading = ref(false);
 const codeCooldown = ref(0);
 const loginCooldown = ref(0);
+const trapField = ref('');
+const formCreatedAt = Date.now();
 let codeTimer: ReturnType<typeof setInterval> | null = null;
 let loginTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -78,6 +81,16 @@ const startCodeCooldown = (seconds = 60) => {
   }, 1000);
 };
 
+const persistCooldown = (key: string, seconds: number) => {
+  localStorage.setItem(key, String(Date.now() + seconds * 1000));
+};
+
+const getRemainSeconds = (key: string) => {
+  const expiresAt = Number(localStorage.getItem(key) || 0);
+  if (!expiresAt) return 0;
+  return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+};
+
 const startLoginCooldown = (seconds: number) => {
   if (loginTimer) clearInterval(loginTimer);
   loginCooldown.value = seconds;
@@ -90,6 +103,27 @@ const startLoginCooldown = (seconds: number) => {
   }, 1000);
 };
 
+const validateFormSecurity = () => {
+  if (trapField.value) {
+    throw new Error('请求已被拦截');
+  }
+  if (Date.now() - formCreatedAt < 1200) {
+    throw new Error('操作过快，请稍后再试');
+  }
+  if (form.value.password.length < 8) {
+    throw new Error('密码至少 8 位');
+  }
+};
+
+const restoreCooldown = () => {
+  const codeRemain = getRemainSeconds('did_code_cooldown_expire_at');
+  if (codeRemain > 0) startCodeCooldown(codeRemain);
+  const loginRemain = getRemainSeconds('did_login_cooldown_expire_at');
+  if (loginRemain > 0) startLoginCooldown(loginRemain);
+};
+
+restoreCooldown();
+
 const sendCode = async () => {
   if (!form.value.email) {
     alert('Please enter your email first');
@@ -98,20 +132,25 @@ const sendCode = async () => {
   if (codeCooldown.value > 0) return;
 
   try {
+    validateFormSecurity();
     await request.post('/auth/send-code', { email: form.value.email });
     startCodeCooldown();
+    persistCooldown('did_code_cooldown_expire_at', 60);
     alert('Verification code sent, please check your email');
   } catch (err: any) {
     if (err.response?.status === 429) {
-      startCodeCooldown(err.retryAfter || 60);
+      const retryAfter = err.retryAfter || 60;
+      startCodeCooldown(retryAfter);
+      persistCooldown('did_code_cooldown_expire_at', retryAfter);
     }
-    alert(err.response?.data?.message || 'Failed to send code');
+    alert(err.message || 'Failed to send code');
   }
 };
 
 const handleLogin = async () => {
   loading.value = true;
   try {
+    validateFormSecurity();
     const res: any = await request.post('/auth/login', {
       email: form.value.email,
       password: form.value.password
@@ -120,9 +159,11 @@ const handleLogin = async () => {
     close();
   } catch (err: any) {
     if (err.response?.status === 429) {
-      startLoginCooldown(err.retryAfter || 60);
+      const retryAfter = err.retryAfter || 60;
+      startLoginCooldown(retryAfter);
+      persistCooldown('did_login_cooldown_expire_at', retryAfter);
     }
-    alert(err.response?.data?.message || 'Login failed');
+    alert(err.message || 'Login failed');
   } finally {
     loading.value = false;
   }
@@ -131,6 +172,7 @@ const handleLogin = async () => {
 const handleRegister = async () => {
   loading.value = true;
   try {
+    validateFormSecurity();
     const res: any = await request.post('/auth/register', {
       email: form.value.email,
       password: form.value.password,
@@ -146,9 +188,11 @@ const handleRegister = async () => {
     close();
   } catch (err: any) {
     if (err.response?.status === 429) {
-      startLoginCooldown(err.retryAfter || 60);
+      const retryAfter = err.retryAfter || 60;
+      startLoginCooldown(retryAfter);
+      persistCooldown('did_login_cooldown_expire_at', retryAfter);
     }
-    alert(err.response?.data?.message || 'Registration failed');
+    alert(err.message || 'Registration failed');
   } finally {
     loading.value = false;
   }
@@ -210,6 +254,14 @@ input {
   border: 1px solid rgba(0,0,0,0.1);
   border-radius: 12px;
   box-sizing: border-box; background: #fff; outline: none; transition: border-color 0.2s;
+}
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 input:focus { border-color: var(--primary-color); }
 input::placeholder { color: #999; }
