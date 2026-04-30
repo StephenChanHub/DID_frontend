@@ -1,31 +1,20 @@
 <template>
+<div class="background">
+    <img class="bg-img" src="/public/store.png" />
+    <div class="Wrap">
+      <span class="Salesperson">👾</span>
+      <span class="Text">{{ mode === 'buy' ? 'Welcome to the DID Store! What do you need?' : 'What do you want to sell?' }}</span>
+    </div>
+
+    <div class="actionGroup">
+      <button class="actionBtn" :class="{ primary: mode === 'buy' }" @click="switchMode('buy')">buy</button>
+      <button class="actionBtn" :class="{ primary: mode === 'sell' }" @click="switchMode('sell')">sell</button>
+    </div>
+  </div>
+
   <div class="page">
     <div class="shell">
-      <header class="topbar">
-        <div class="Wrap">
-          <img class="Salesperson" :src="`/public/Salesperson0${salesperson}.png`" alt="salesperson" />
-          <span class="Text">{{ mode === 'buy' ? 'Welcome to the DID Store! What do you need?' : 'Welcome! What do you want to sell?' }}</span>
-        </div>
-
-        <div class="actionGroup">
-          <button class="actionBtn" :class="{ primary: mode === 'buy' }" @click="switchMode('buy')">buy</button>
-          <button class="actionBtn" :class="{ primary: mode === 'sell' }" @click="switchMode('sell')">sell</button>
-        </div>
-      </header>
-
       <main class="content" :class="{ noSidebar: mode === 'sell' }">
-        <aside v-if="mode === 'buy'" class="sidebar">
-          <button
-            v-for="cat in categories"
-            :key="cat.value"
-            class="categoryBtn"
-            :class="{ active: selectedCategory === cat.value }"
-            @click="selectedCategory = cat.value"
-          >
-            {{ cat.label }}
-          </button>
-        </aside>
-
         <section class="productPanel">
           <div v-if="loading" class="loading-state">Loading...</div>
           <div v-else-if="filteredProducts.length === 0" class="empty-state">
@@ -45,19 +34,32 @@
                   :alt="item.name"
                   class="thumb-img"
                 />
-                <span v-else>{{ item.emoji || '📀' }}</span>
+                <span v-else class="emoji">{{ item.emoji || '📀' }}</span>
               </div>
               <div class="cardBody">
                 <h3 class="title">{{ item.name }}</h3>
+                <p v-if="item._isCollection && item.description" class="desc-text">{{ item.description }}</p>
                 <p v-if="mode === 'buy'" class="desc">{{ item.buy_price }} Coins</p>
                 <p v-else class="desc">x{{ item.quantity }} · {{ item.sell_price }} Coin each</p>
               </div>
             </article>
           </div>
         </section>
+
+        <aside v-if="mode === 'buy'" class="sidebar">
+          <button
+            v-for="cat in categories"
+            :key="cat.value"
+            class="categoryBtn"
+            :class="{ active: selectedCategory === cat.value }"
+            @click="selectedCategory = cat.value"
+          >
+            {{ cat.label }}
+          </button>
+        </aside>
       </main>
 
-      <button class="backBtn" @click="goBack">← back</button>
+      <button class="backBtn" @click="goBack">🔙 </button>
     </div>
 
     <ItemDetailModal
@@ -69,6 +71,18 @@
       @buy="handleBuy"
       @sell="handleSellItem"
     />
+
+    <Album
+      :visible="showAlbum"
+      :image-url="albumItem?.image_url || null"
+      :media-url="albumItem?.media_url || null"
+      :name="albumItem?.name || ''"
+      mode="store"
+      :price="albumItem?.buy_price || 0"
+      :collection-id="albumItem?.id || 0"
+      @close="showAlbum = false"
+      @buy="handleAlbumBuy"
+    />
   </div>
 </template>
 
@@ -78,6 +92,7 @@ import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 import request from '@/api/request';
 import ItemDetailModal from '@/components/ItemDetailModal.vue';
+import Album from '@/components/Album.vue';
 import { buildFileUrl } from '@/config/env';
 
 const router = useRouter();
@@ -120,6 +135,7 @@ interface ProductItem {
   sell_price: number;
   image_url?: string;
   media_url?: string;
+  category?: string;
   type?: string;
   quantity?: number;
   recovery_value?: number;
@@ -153,7 +169,8 @@ const products = computed<ProductItem[]>(() => {
         buy_price: c.buy_price,
         sell_price: 0,
         image_url: c.image_url,
-        media_url: c.media_url
+        media_url: c.media_url,
+        category: c.category
       }));
     return [...items, ...cols];
   }
@@ -195,8 +212,32 @@ const selectedItem = ref<ProductItem>({
 });
 
 const openDetail = (item: ProductItem) => {
+  if (item._isCollection && item.category === 'album') {
+    albumItem.value = item;
+    showAlbum.value = true;
+    return;
+  }
   selectedItem.value = { ...item };
   detailVisible.value = true;
+};
+
+// Album overlay state
+const showAlbum = ref(false);
+const albumItem = ref<ProductItem | null>(null);
+
+const handleAlbumBuy = async (collectionId: number) => {
+  try {
+    const res: any = await request.post('/shop/buy', { collectionId });
+    userStore.updateCoins(res.coins);
+    showAlbum.value = false;
+    await fetchProducts();
+    const statsRes: any = await request.get('/user/stats');
+    if (statsRes) {
+      userStore.updateCoins(statsRes.coins);
+    }
+  } catch (err) {
+    console.error('Buy album failed', err);
+  }
 };
 
 const switchMode = (m: 'buy' | 'sell') => {
@@ -212,8 +253,8 @@ const fetchProducts = async () => {
   try {
     if (mode.value === 'buy') {
       const [itemsRes, colsRes] = await Promise.all([
-        request.get('/admin/items', { params: { type: 'food' } }).catch(() => ({ items: [] })),
-        request.get('/admin/collections').catch(() => ({ collections: [] }))
+        request.get('/shop/items').catch(() => ({ items: [] })),
+        request.get('/shop/collections').catch(() => ({ collections: [] }))
       ]);
       buyItems.value = (itemsRes as any)?.items || [];
       buyCollections.value = (colsRes as any)?.collections || [];
@@ -265,57 +306,86 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
 </script>
 
 <style scoped>
+.background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60vh;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.bg-img {
+  width: 100%;
+  height: 80%;
+  object-fit: cover;
+  display: block;
+  mask-image: linear-gradient(to top, transparent 0%, black 30%);
+  -webkit-mask-image: linear-gradient(to top, transparent 0%, black 30%);
+}
+
 .page {
+  margin-top: 50%;
+  position: relative;
+  z-index: 2;
   min-height: 100vh;
-  background: var(--bg-color);
+  background: rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: center;
-  padding: 24px;
+  padding: 20px;
   box-sizing: border-box;
 }
 
 .shell {
-  width: min(1200px, 100%);
-  max-height: calc(100vh - 48px);
+    margin-top: -30%;
+  width: 100%;
+  max-height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 24px;
-  padding: 24px;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
 }
 
-.topbar {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-
 .Wrap {
-  flex: 1;
+  position: absolute;
+  top: 15%;
+  left: 30%;
+  transform: translate(-50%, -50%);
   height: 100px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  /* border: 1px solid rgba(255, 255, 255, 0.5); */
   border-radius: 24px;
   display: flex;
   align-items: center;
   padding: 0 24px;
   box-sizing: border-box;
   background: transparent;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  /* backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); */
+  white-space: nowrap;
 }
 
 .Salesperson {
+  font-size: 80px;
   width: 80px;
   height: 100%;
   object-fit: cover;
   flex-shrink: 0;
+  animation: wave 1.2s ease-in-out infinite;
+  display: inline-block;
+  transform-origin: bottom center;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
 }
 
 .Text {
@@ -341,6 +411,10 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
 }
 
 .actionGroup {
+  position: absolute;
+  top: 25%;
+  right: 5%;
+  transform: translateY(-50%);
   width: 180px;
   display: flex;
   flex-direction: column;
@@ -351,7 +425,7 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
   height: 45px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   font-size: 24px;
@@ -375,18 +449,22 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 180px 1fr;
+  grid-template-columns: 1fr 180px;
+  grid-template-rows: 1fr;
   gap: 24px;
+  overflow: hidden;
 }
 
 .content.noSidebar {
   grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
 }
 
 .sidebar {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-height: 0;
 }
 
 .categoryBtn {
@@ -429,11 +507,11 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  overflow: hidden;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0;
   min-width: 0;
+  min-height: 0;
 }
 
 .grid {
@@ -461,9 +539,9 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
 }
 
 .thumb {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -471,6 +549,10 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
   font-size: 26px;
   color: var(--primary-color);
   overflow: hidden;
+}
+
+.emoji {
+  font-size: 36px;
 }
 
 .thumb-img {
@@ -485,6 +567,19 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
   color: black;
   font-weight: 500;
   text-align: center;
+}
+
+.desc-text {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #555;
+  text-align: center;
+  line-height: 1.3;
+  max-height: 2.6em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .desc {
@@ -532,79 +627,144 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
 }
 
 @media (max-width: 900px) {
-  .topbar {
-    flex-direction: column;
+  .background {
+    height: 200px;
+    z-index: 3;
+    pointer-events: none;
   }
 
-  .actionGroup {
-    position: fixed;
-    bottom: 96px;
-    right: 20px;
-    width: auto;
-    flex-direction: column;
-    gap: 8px;
-    z-index: 99;
+  .page {
+    padding: 12px;
   }
 
-  .actionBtn {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    font-size: 14px;
-    background: rgba(255, 255, 255, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    margin: 0;
-    opacity: 1;
+  .bg-img {
+    height: 100%;
+    width: 100%;
   }
 
-  .actionBtn.primary {
-    background: rgba(255, 255, 255, 0.6);
+  .shell {
+    position: relative;
+    margin-top: -10%;
+    padding: 0 16px;
+    max-height: calc(100vh - 300px);
+    border-radius: 16px;
+  }
+
+  .Wrap {
+    transform: translate(-40%, 30%) scale(0.5);
   }
 
   .content {
     grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
     gap: 16px;
+    padding-top: 30px;
+    padding-bottom: 10px;
+  }
+
+  .content.noSidebar {
+    grid-template-rows: 1fr;
+    padding-top: 0;
   }
 
   .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
     flex-direction: row;
-    flex-wrap: wrap;
+    justify-content: center;
     gap: 12px;
+    padding: 12px 20px;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
   }
 
   .categoryBtn {
-    flex: 1 1 120px;
-    min-height: 44px;
-    font-size: 18px;
-  }
-
-  .Wrap {
-    height: auto;
-    padding: 12px 16px;
-  }
-
-  .Salesperson {
-    width: 72px;
-    height: 72px;
-  }
-
-  .Text {
+    flex: 0 0 auto;
+    min-height: 36px;
+    max-height: 36px;
     font-size: 16px;
-    padding: 10px 14px;
-    margin-left: 16px;
-    border-radius: 3px 14px 14px 14px;
+    padding: 0 20px;
+    border-radius: 20px;
+    box-shadow: none;
+    transition: opacity 0.15s, background 0.2s;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.4);
   }
 
-  .Text::before {
-    left: -8px;
-    top: 18px;
-    border-width: 5px;
+  .categoryBtn.active {
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    opacity: 1;
+    font-weight: 600;
+  }
+
+
+  .actionGroup {
+    position: fixed;
+    top: auto;
+    right: auto;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 500px;
+    height: 64px;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.18) 50%, rgba(255, 255, 255, 0.14) 100%);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(15px) saturate(120%);
+    border: 1px solid rgba(255, 255, 255, 0.42);
+    box-shadow: 0 18px 52px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 -1px 0 rgba(255, 255, 255, 0.5);
+    border-radius: 34px;
+    gap: 0;
+    z-index: 1000;
+    pointer-events: auto;
+  }
+
+  .actionBtn {
+    height: auto;
+    width: auto;
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    box-shadow: none;
+    opacity: 0.5;
+    padding: 8px 24px;
+    border-radius: 0;
+    position: relative;
+    z-index: 1;
+    color: var(--text-color);
+    transition: opacity 0.3s, color 0.3s, transform 0.15s;
+  }
+
+  .actionBtn.primary {
+    opacity: 1;
+    color: var(--primary-color);
+    text-shadow: 0 0 10px var(--primary-color);
+    box-shadow: none;
+  }
+
+  .productPanel {
+    min-height: 0;
+    max-width: 100%;
   }
 
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 100%;
   }
 
   .card {
@@ -613,8 +773,8 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
   }
 
   .thumb {
-    width: 36px;
-    height: 36px;
+    width: 50px;
+    height: 50px;
     font-size: 20px;
     margin-bottom: 10px;
   }
@@ -631,7 +791,7 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
     width: 56px;
     height: 56px;
     font-size: 14px;
-    bottom: 20px;
+    bottom: 100px;
     right: 20px;
   }
 }

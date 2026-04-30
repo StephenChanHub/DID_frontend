@@ -4,6 +4,9 @@
         <div class="floating-content">
             {{ typeName }}
         </div>
+        <div class="daily-counter">
+            Max: {{ dailyQuestionsCount }}/{{ dailyQuestionsLimit }}
+        </div>
     </div>
 
     <!-- <header class="page-header">
@@ -64,6 +67,8 @@ const currentLevel = ref('B1'); // 默认展示 B1
 const materials = ref<any[]>([]);
 const loading = ref(false);
 const loginTimer = ref<ReturnType<typeof setTimeout> | null>(null);
+const dailyQuestionsCount = ref(Number(localStorage.getItem('did_dailyQuestionsCount')) || 0);
+const dailyQuestionsLimit = ref(Number(localStorage.getItem('did_dailyQuestionsLimit')) || 50);
 
 // 获取当前训练类型 (reading/listening 等)
 const type = computed(() => route.query.type as string || 'reading');
@@ -381,6 +386,7 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
     border-radius: 18px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     z-index: 1001;
@@ -393,6 +399,14 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
     color: var(--text-color);
     display: flex;
     align-items: center;
+}
+
+.daily-counter {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 0.75rem;
+    color: #888;
+    font-weight: 500;
 }
 
 /* 大屏幕（电脑全屏） */

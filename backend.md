@@ -88,22 +88,28 @@ DID_server/
 
 **体力机制**：每次答题消耗 10 体力，每 5 分钟自动恢复 1 点（所有 API 请求时自动同步），体力不足时返回 403。
 
-| 路由                   | 方法   | 功能         | 认证要求   | 说明                                                                                                  |
-| :--------------------- | :----- | :----------- | :--------- | :---------------------------------------------------------------------------------------------------- |
-| `/api/practice/submit` | `POST` | 提交练习答案 | 用户 Token | 体力检查(≥10)→扣10体力→total_questions+1→判题→通过则按 material_reward_configs 掉落 items/collections |
+**每日限制**：每天最多答题 50 次，超过后返回 403，次日 0 点重置。
+
+**奖励冷却**：同一素材通过后 24 小时内不重复掉落奖励。
+
+| 路由                   | 方法   | 功能         | 认证要求   | 说明                                                                                                                      |
+| :--------------------- | :----- | :----------- | :--------- | :------------------------------------------------------------------------------------------------------------------------ |
+| `/api/practice/submit` | `POST` | 提交练习答案 | 用户 Token | 日限检查(≥50→403)→体力检查(≥10)→扣10体力+日计数+1+total_questions+1→判题→通过且24h未领奖则按 material_reward_configs 掉落 |
 
 ### D. 游戏系统 (Game)
 
 **基础路由前缀：`/api`** | 中间件：`authenticateToken` + `staminaSync`
 
-| 路由                    | 方法   | 功能         | 认证要求   | 说明                                                                                 |
-| :---------------------- | :----- | :----------- | :--------- | :----------------------------------------------------------------------------------- |
-| `/api/user/stats`       | `GET`  | 获取用户统计 | 用户 Token | 返回 nickname、coins、level、total_questions、stamina、max_stamina                   |
-| `/api/items/inventory`  | `GET`  | 查看背包     | 用户 Token | 返回用户持有的所有物品及其数量                                                       |
-| `/api/items/sell`       | `POST` | 出售物品     | 用户 Token | 仅 item 类型可售（food 拦截），扣除背包物品 → 增加 coins                             |
-| `/api/items/use`        | `POST` | 使用食物     | 用户 Token | 仅 food 类型可用，消耗物品 → 恢复 stamina（不超过 max_stamina）                      |
-| `/api/shop/buy`         | `POST` | 商店购买     | 用户 Token | 支持 collectionId（购买收藏品）或 itemId+quantity（购买 food 物品），检查 coins 余额 |
-| `/api/collections/mine` | `GET`  | 我的收藏品   | 用户 Token | 返回用户已购买的全部收藏品                                                           |
+| 路由                    | 方法   | 功能           | 认证要求   | 说明                                                                                 |
+| :---------------------- | :----- | :------------- | :--------- | :----------------------------------------------------------------------------------- |
+| `/api/user/stats`       | `GET`  | 获取用户统计   | 用户 Token | 返回 nickname、coins、level、total_questions、stamina、max_stamina                   |
+| `/api/items/inventory`  | `GET`  | 查看背包       | 用户 Token | 返回用户持有的所有物品及其数量                                                       |
+| `/api/items/sell`       | `POST` | 出售物品       | 用户 Token | 仅 item 类型可售（food 拦截），扣除背包物品 → 增加 coins                             |
+| `/api/items/use`        | `POST` | 使用食物       | 用户 Token | 仅 food 类型可用，消耗物品 → 恢复 stamina（不超过 max_stamina）                      |
+| `/api/shop/items`       | `GET`  | 商店物品列表   | 用户 Token | 返回可购买的 food 类型物品（type='food' 且 buy_price>0）                             |
+| `/api/shop/collections` | `GET`  | 商店收藏品列表 | 用户 Token | 返回可购买的收藏品（buy_price>0）                                                    |
+| `/api/shop/buy`         | `POST` | 商店购买       | 用户 Token | 支持 collectionId（购买收藏品）或 itemId+quantity（购买 food 物品），检查 coins 余额 |
+| `/api/collections/mine` | `GET`  | 我的收藏品     | 用户 Token | 返回用户已购买的全部收藏品                                                           |
 
 ### E. 管理员游戏配置 (Admin Game)
 
@@ -169,7 +175,7 @@ DID_server/
 - **登录**：邮箱/密码必填
 - **密码重置**：邮箱格式、验证码6位数字、新密码≥6
 - **素材ID/题目ID**：必须是数字
-- **练习提交**：materialId数字、answers数组格式（每项含 qId 和 val）
+- **练习提交**：materialId数字、answers数组格式（每项含 qId 和 val）、每日限50次、同素材24h内仅首次通过可获得奖励
 - **创建素材**：type/level/title/content 必填，country/topic 可选
 - **出售物品**：itemId 正整数、quantity 正整数
 - **使用食物**：itemId 正整数、quantity 正整数

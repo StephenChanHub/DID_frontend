@@ -2,26 +2,21 @@
   <Teleport to="body">
     <div v-if="visible" class="detail-overlay" @click.self="handleCancel">
       <div class="detail-modal">
+        <!-- 右上角拥有数量徽章 -->
+        <div v-if="showOwnedBadge && item.quantity !== undefined" class="owned-badge">x{{ item.quantity }}</div>
+
         <div class="detail-emoji">{{ item.emoji || '📀' }}</div>
-        <h2 class="detail-name">{{ item.name }}</h2>
+
+        <div class="name-row">
+          <h2 class="detail-name">{{ item.name }}</h2>
+          <span v-if="isFood && item.recovery_value" class="recovery-inline">+{{ totalRecovery }} Stamina</span>
+        </div>
+
         <p v-if="item.description" class="detail-desc">{{ item.description }}</p>
-        <div class="detail-stats">
-          <div v-if="item.type === 'food' && item.recovery_value" class="stat">
-            <span class="stat-label">Recovery</span>
-            <span class="stat-value">+{{ item.recovery_value }} Stamina</span>
-          </div>
-          <div v-if="mode === 'bag' && item.quantity !== undefined" class="stat">
-            <span class="stat-label">Owned</span>
-            <span class="stat-value">x{{ item.quantity }}</span>
-          </div>
-          <div v-if="mode === 'store' && item.buy_price" class="stat">
-            <span class="stat-label">Price</span>
-            <span class="stat-value">{{ item.buy_price }} Coins</span>
-          </div>
-          <div v-if="item.sell_price" class="stat">
-            <span class="stat-label">Sell Price</span>
-            <span class="stat-value">{{ item.sell_price }} Coins</span>
-          </div>
+
+        <!-- 总价展示 -->
+        <div v-if="showTotalPrice" class="total-price-row">
+          <span class="total-price-value">Costs  {{ totalPrice }}  Coins</span>
         </div>
 
         <div v-if="showQtySelector" class="qty-selector">
@@ -146,6 +141,30 @@ const maxQty = computed(() => {
   return 99;
 });
 
+const isFood = computed(() => props.item.type === 'food');
+
+const showOwnedBadge = computed(() =>
+  props.mode === 'bag' || (props.mode === 'store' && props.storeSubMode === 'sell')
+);
+
+const totalRecovery = computed(() => (props.item.recovery_value || 0) * qty.value);
+
+const showTotalPrice = computed(() => {
+  // 售卖：有 sell_price 时显示总价
+  if (props.mode === 'bag' && props.item.type === 'item' && props.item.sell_price) return true;
+  if (props.mode === 'store' && props.storeSubMode === 'sell' && !props.item._isCollection && props.item.sell_price) return true;
+  // 购买：有 buy_price 时显示总价（收藏品除外，收藏品无数量选择器）
+  if (props.mode === 'store' && !props.item._isCollection && props.item.buy_price) return true;
+  if (props.mode === 'store' && props.item._isCollection && props.item.buy_price) return true;
+  return false;
+});
+
+const totalPrice = computed(() => {
+  if (props.mode === 'store' && props.item._isCollection) return props.item.buy_price || 0;
+  if (props.mode === 'store' && props.storeSubMode !== 'sell') return (props.item.buy_price || 0) * qty.value;
+  return (props.item.sell_price || 0) * qty.value;
+});
+
 const itemId = () => props.item.item_id ?? props.item.id ?? 0;
 
 const handleCancel = () => emit('cancel');
@@ -174,6 +193,7 @@ const handleBuy = () => emit('buy', itemId(), qty.value);
 }
 
 .detail-modal {
+  position: relative;
   padding: 28px 24px;
   max-width: 360px;
   width: 90%;
@@ -184,6 +204,19 @@ const handleBuy = () => emit('buy', itemId(), qty.value);
 @keyframes scaleIn {
   from { transform: scale(0.8); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* 右上角拥有数量徽章 */
+.owned-badge {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 12px;
 }
 
 .detail-emoji {
@@ -197,10 +230,25 @@ const handleBuy = () => emit('buy', itemId(), qty.value);
   50% { transform: translateY(-10px); }
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
 .detail-name {
   color: var(--primary-color);
-  margin: 0 0 6px;
+  margin: 0;
   font-size: 1.3rem;
+}
+
+.recovery-inline {
+  font-weight: 700;
+  color: #4caf50;
+  font-size: 0.95rem;
 }
 
 .detail-desc {
@@ -210,31 +258,14 @@ const handleBuy = () => emit('buy', itemId(), qty.value);
   line-height: 1.4;
 }
 
-.detail-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin-bottom: 16px;
+.total-price-row {
+  margin-top: 20px;
 }
 
-.stat {
-  padding: 6px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-label {
-  font-size: 0.7rem;
-  color: #ffffff;
-  text-transform: uppercase;
-}
-
-.stat-value {
+.total-price-value {
   font-weight: 700;
-  color: var(--primary-color);
-  font-size: 0.95rem;
+  color: red;
+  font-size: 1.1rem;
 }
 
 .qty-selector {

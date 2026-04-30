@@ -27,16 +27,19 @@ request.interceptors.response.use(
       return Promise.reject(err);
     }
 
-    const { status, data } = err.response;
+    const { status, data, headers } = err.response;
     const msg = data?.message || '未知错误';
 
     if (status === 401) {
       alert('登录失效：' + msg);
       localStorage.removeItem('did_token');
-      // 不再使用window.location.href跳转，避免PWA模式跳出
-      // 由前端组件监听认证状态变化并处理跳转
-    } else {
-      alert('请求失败：' + msg); // 捕获 400, 403, 404, 500 等
+    } else if (status === 429) {
+      const retryAfter = parseInt(headers['retry-after']) || 60;
+      err.retryAfter = retryAfter;
+      // 429 由各组件自行处理冷却倒计时
+    } else if (status !== 403) {
+      // 403 错误（每日次数用尽、体力不足等）由各组件自行处理，不弹 alert
+      alert('请求失败：' + msg);
     }
     return Promise.reject(err);
   }

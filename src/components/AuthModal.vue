@@ -26,8 +26,8 @@
 
         <input v-model="form.password" type="password" placeholder="Password" required />
 
-        <button type="submit" class="submit-btn style-image" :disabled="loading">
-          {{ loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Register') }}
+        <button type="submit" class="submit-btn style-image" :disabled="loading || loginCooldown > 0">
+          {{ loading ? 'Processing...' : loginCooldown > 0 ? `${loginCooldown}s` : (isLogin ? 'Sign In' : 'Register') }}
         </button>
       </form>
 
@@ -51,7 +51,9 @@ const userStore = useUserStore();
 const isLogin = ref(true);
 const loading = ref(false);
 const codeCooldown = ref(0);
+const loginCooldown = ref(0);
 let codeTimer: ReturnType<typeof setInterval> | null = null;
+let loginTimer: ReturnType<typeof setInterval> | null = null;
 
 const form = ref({
   email: '',
@@ -64,13 +66,26 @@ const close = () => {
   userStore.showAuthModal = false;
 };
 
-const startCodeCooldown = () => {
-  codeCooldown.value = 60;
+const startCodeCooldown = (seconds = 60) => {
+  if (codeTimer) clearInterval(codeTimer);
+  codeCooldown.value = seconds;
   codeTimer = setInterval(() => {
     codeCooldown.value--;
     if (codeCooldown.value <= 0) {
       if (codeTimer) clearInterval(codeTimer);
       codeTimer = null;
+    }
+  }, 1000);
+};
+
+const startLoginCooldown = (seconds: number) => {
+  if (loginTimer) clearInterval(loginTimer);
+  loginCooldown.value = seconds;
+  loginTimer = setInterval(() => {
+    loginCooldown.value--;
+    if (loginCooldown.value <= 0) {
+      if (loginTimer) clearInterval(loginTimer);
+      loginTimer = null;
     }
   }, 1000);
 };
@@ -87,6 +102,9 @@ const sendCode = async () => {
     startCodeCooldown();
     alert('Verification code sent, please check your email');
   } catch (err: any) {
+    if (err.response?.status === 429) {
+      startCodeCooldown(err.retryAfter || 60);
+    }
     alert(err.response?.data?.message || 'Failed to send code');
   }
 };
@@ -101,6 +119,9 @@ const handleLogin = async () => {
     userStore.loginSuccess({ ...res, email: form.value.email });
     close();
   } catch (err: any) {
+    if (err.response?.status === 429) {
+      startLoginCooldown(err.retryAfter || 60);
+    }
     alert(err.response?.data?.message || 'Login failed');
   } finally {
     loading.value = false;
@@ -124,6 +145,9 @@ const handleRegister = async () => {
     userStore.loginSuccess({ ...loginRes, email: form.value.email });
     close();
   } catch (err: any) {
+    if (err.response?.status === 429) {
+      startLoginCooldown(err.retryAfter || 60);
+    }
     alert(err.response?.data?.message || 'Registration failed');
   } finally {
     loading.value = false;

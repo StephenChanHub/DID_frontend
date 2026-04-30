@@ -28,7 +28,7 @@
             <div class="stamina-bar-bg">
               <div class="stamina-bar-fill" :style="{ width: staminaPercent + '%' }"></div>
             </div>
-            <span class="stamina-text">STA {{ userStore.stamina }}/{{ userStore.maxStamina }}</span>
+            <span class="stamina-text">{{ userStore.stamina }}/{{ userStore.maxStamina }}</span>
           </div>
         </div>
       </div>
@@ -99,11 +99,22 @@
         </div>
 
         <div v-else-if="activeTab === 'collections'" class="collections-content">
-          <Collections />
+          <Collections @open-album="handleOpenAlbum" />
         </div>
       </div>
 
     </div>
+
+    <Album
+      :visible="showAlbum"
+      :image-url="albumItem?.image_url || null"
+      :media-url="albumItem?.media_url || null"
+      :name="albumItem?.name || ''"
+      mode="view"
+      :price="0"
+      :collection-id="albumItem?.collection_id || 0"
+      @close="showAlbum = false"
+    />
   </div>
 </template>
 
@@ -115,6 +126,7 @@ import { useThemeStore } from '@/store/theme';
 import request from '@/api/request';
 import Bag from '@/components/Bag.vue';
 import Collections from '@/components/Collections.vue';
+import Album from '@/components/Album.vue';
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -235,6 +247,15 @@ const goToPractice = (id: number) => {
 };
 
 const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
+
+// Album overlay state
+const showAlbum = ref(false);
+const albumItem = ref<any>(null);
+
+const handleOpenAlbum = (item: any) => {
+  albumItem.value = item;
+  showAlbum.value = true;
+};
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
@@ -761,3 +782,7 @@ watch(() => userStore.isLoggedIn, (isLoggedIn) => {
   }
 }
 </style>
+
+
+
+

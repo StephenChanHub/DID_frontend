@@ -35,28 +35,28 @@
                 <button v-for="opt in q.options" :key="opt" :class="[
                   'opt-btn',
                   { active: userAnswers[q.id] === opt.charAt(0) },
-                  getOptionClass(q, opt)
-                ]" @click="!showResult && (userAnswers[q.id] = opt.charAt(0))" :disabled="showResult">
+                  getOptionClass(q, opt, item.id)
+                ]" @click="!showResult[item.id] && (userAnswers[q.id] = opt.charAt(0))" :disabled="showResult[item.id]">
                   {{ opt }}
                 </button>
               </div>
 
               <div v-else-if="q.q_type === 'bool'" class="options-grid binary">
-                <button :class="['opt-btn', { active: userAnswers[q.id] === 'T' }, getOptionClass(q, 'T')]"
-                  @click="!showResult && (userAnswers[q.id] = 'T')" :disabled="showResult">T</button>
-                <button :class="['opt-btn', { active: userAnswers[q.id] === 'F' }, getOptionClass(q, 'F')]"
-                  @click="!showResult && (userAnswers[q.id] = 'F')" :disabled="showResult">F</button>
+                <button :class="['opt-btn', { active: userAnswers[q.id] === 'T' }, getOptionClass(q, 'T', item.id)]"
+                  @click="!showResult[item.id] && (userAnswers[q.id] = 'T')" :disabled="showResult[item.id]">T</button>
+                <button :class="['opt-btn', { active: userAnswers[q.id] === 'F' }, getOptionClass(q, 'F', item.id)]"
+                  @click="!showResult[item.id] && (userAnswers[q.id] = 'F')" :disabled="showResult[item.id]">F</button>
               </div>
 
               <div v-else-if="q.q_type === 'fill'" class="fill-input-wrapper">
                 <input v-model="userAnswers[q.id]" type="text" placeholder="Input your answer here..."
-                  class="fill-input" :disabled="showResult" />
-                <div v-if="showResult && answerResults[q.id]" class="fill-correct-answer">
+                  class="fill-input" :disabled="showResult[item.id]" />
+                <div v-if="showResult[item.id] && answerResults[q.id]" class="fill-correct-answer">
                   correct Answer : {{ getCorrectAnswer(q) }}
                 </div>
               </div>
 
-              <div v-if="showResult" class="feedback-tag" :class="isAnswerCorrect(q) ? 'correct' : 'wrong'">
+              <div v-if="showResult[item.id]" class="feedback-tag" :class="isAnswerCorrect(q) ? 'correct' : 'wrong'">
                 <div v-if="isAnswerCorrect(q)" class="feedback-content">
                   ✅<!--  perfect！: {{ formatAnswerDisplay(q, userAnswers[q.id]) }} -->
                 </div>
@@ -69,7 +69,7 @@
           </div>
 
           <div class="action-footer">
-            <button class="btn-clear" @click="clearAnswers">Clear</button>
+            <button class="btn-clear" @click="clearAnswers(item.id)">Clear</button>
             <button class="btn-submit" @click="handleSubmit(item.id)">Submit</button>
           </div>
         </div>
@@ -92,6 +92,7 @@
       :correct-count="rewardData.correctCount"
       :total-questions="rewardData.totalQuestions"
       :drops="rewardData.drops"
+      :message="rewardData.message"
       @close="rewardVisible = false"
     />
   </div>
@@ -114,7 +115,7 @@ let intersectionObserver: IntersectionObserver | null = null;
 const practiceList = ref<any[]>([]); // 练习素材列表
 const userAnswers = reactive<Record<number, string>>({}); // 存储用户填写的答案
 const activeCards = reactive<Record<number, boolean>>({}); // 存储卡片激活状态（是否在视口中）
-const showResult = ref(false);
+const showResult = reactive<Record<number, boolean>>({});
 const favoriteCards = reactive<Record<number, boolean>>({}); // 存储收藏状态
 const answerResults = ref<Record<number, any>>({}); // 存储提交后的答案结果（来自后端）
 
@@ -124,7 +125,8 @@ const rewardData = ref({
   isPassed: false,
   correctCount: 0,
   totalQuestions: 0,
-  drops: [] as any[]
+  drops: [] as any[],
+  message: ''
 });
 
 const hasMeta = (value: unknown) => typeof value === 'string' && value.trim().length > 0;
@@ -273,14 +275,18 @@ const fetchPracticeMaterials = async () => {
 
 // 提交逻辑
 const handleSubmit = async (materialId: number) => {
+  const material = practiceList.value.find(m => m.id === materialId) as any;
+  const questionIds = new Set<number>((material?.questions ?? []).map((q: any) => q.id));
   const payload = {
     materialId,
-    answers: Object.entries(userAnswers).map(([qId, val]) => ({ qId: Number(qId), val }))
+    answers: Object.entries(userAnswers)
+      .filter(([qId]) => questionIds.has(Number(qId)))
+      .map(([qId, val]) => ({ qId: Number(qId), val }))
   };
 
   try {
     const res: any = await request.post('/practice/submit', payload);
-    showResult.value = true;
+    showResult[materialId] = true;
 
     // 保存答案结果，用于显示反馈
     if (res.answerDetails) {
@@ -294,16 +300,41 @@ const handleSubmit = async (materialId: number) => {
       userStore.updateStamina(res.stamina);
     }
 
+    // 同步每日答题计数到 localStorage
+    if (typeof res.dailyQuestionsCount === 'number') {
+      localStorage.setItem('did_dailyQuestionsCount', String(res.dailyQuestionsCount));
+    }
+    if (typeof res.dailyQuestionsLimit === 'number') {
+      localStorage.setItem('did_dailyQuestionsLimit', String(res.dailyQuestionsLimit));
+    }
+
     // 显示奖励弹窗
     rewardData.value = {
       isPassed: !!res.isPassed,
       correctCount: res.correctCount ?? 0,
       totalQuestions: res.totalQuestions ?? 0,
-      drops: Array.isArray(res.drops) ? res.drops : []
+      drops: Array.isArray(res.drops) ? res.drops : [],
+      message: res.message || ''
     };
     rewardVisible.value = true;
-  } catch (err) {
-    console.error('提交失败', err);
+  } catch (err: any) {
+    const status = err?.response?.status;
+    const data = err?.response?.data;
+
+    if (status === 403) {
+      // 每日次数用尽 → 通过弹窗提示
+      rewardData.value = {
+        isPassed: false,
+        correctCount: 0,
+        totalQuestions: 0,
+        drops: [],
+        message: data?.message || '今日答题次数已用完，请明天再来'
+      };
+      localStorage.setItem('did_dailyQuestionsCount', String(data?.dailyQuestionsCount ?? 50));
+      rewardVisible.value = true;
+    } else {
+      console.error('提交失败', err);
+    }
   }
 };
 
@@ -393,8 +424,8 @@ const isAnswerCorrect = (q: any) => {
 };
 
 // 获取选项的CSS类（用于选择题/判断题的反馈样式）
-const getOptionClass = (q: any, option: string) => {
-  if (!showResult.value || !answerResults.value[q.id]) {
+const getOptionClass = (q: any, option: string, materialId: number) => {
+  if (!showResult[materialId] || !answerResults.value[q.id]) {
     return '';
   }
 
@@ -435,10 +466,17 @@ const toggleFavorite = async (materialId: number) => {
   }
 };
 
-const clearAnswers = () => {
-  Object.keys(userAnswers).forEach(key => delete userAnswers[Number(key)]);
-  answerResults.value = {};
-  showResult.value = false;
+const clearAnswers = (materialId?: number) => {
+  if (materialId != null) {
+    const material = practiceList.value.find(m => m.id === materialId) as any;
+    const questionIds = new Set<number>((material?.questions ?? []).map((q: any) => q.id));
+    questionIds.forEach(qId => delete userAnswers[qId]);
+    delete showResult[materialId];
+  } else {
+    Object.keys(userAnswers).forEach(key => delete userAnswers[Number(key)]);
+    Object.keys(showResult).forEach(key => delete showResult[Number(key)]);
+    answerResults.value = {};
+  }
 };
 
 // TikTok 式滚动控制
@@ -918,7 +956,6 @@ onUnmounted(() => {
   color: #fff;
   box-shadow: 0 8px 20px var(--shadow-color);
 }
-
 
 .side-controls {
   position: fixed;

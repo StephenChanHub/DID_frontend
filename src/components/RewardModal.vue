@@ -11,16 +11,17 @@
         <div v-if="isPassed && drops.length > 0" class="drops-section">
           <p class="drops-label">You obtained:</p>
           <div class="drops-list">
-            <div v-for="(drop, i) in drops" :key="i" class="drop-item">
+            <!-- <div v-for="(drop, i) in drops" :key="i" class="drop-item">
               <span v-if="drop.emoji" class="drop-emoji">{{ drop.emoji }}</span>
               <span v-else class="drop-icon">📀</span>
               <span class="drop-name">{{ drop.name }}</span>
               <span v-if="drop.quantity > 1" class="drop-qty">x{{ drop.quantity }}</span>
-            </div>
+            </div> -->
           </div>
         </div>
-        <p v-else-if="isPassed" class="drops-empty">Passed but no items dropped. Better luck next time!</p>
-        <p v-if="!isPassed" class="drops-empty">Correct rate too low, no rewards this time.</p>
+        <!-- <p v-else-if="isPassed" class="drops-empty">Passed but no items dropped. Better luck next time!</p> -->
+        <!-- <p v-if="!isPassed" class="drops-empty">Correct rate too low, no rewards this time.</p> -->
+        <p v-if="message" class="server-message">{{ message }}</p>
         <button class="confirm-btn" @click="handleClose">Confirm</button>
       </div>
     </div>
@@ -44,6 +45,7 @@ const props = defineProps<{
   correctCount: number;
   totalQuestions: number;
   drops: Drop[];
+  message?: string;
 }>();
 
 const emit = defineEmits<{
@@ -148,6 +150,16 @@ const handleClose = () => {
 .drops-empty {
   color: #888;
   margin: 16px 0;
+}
+
+.server-message {
+  color: var(--primary-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 12px 0;
+  padding: 8px 16px;
+  background: none;
+  border-radius: 10px;
 }
 
 .confirm-btn {

@@ -1,5 +1,6 @@
 <template>
   <span class="loader"></span>
+  <span class="loading">loading...</span>
 </template>
 
 <script>
@@ -9,6 +10,11 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+.loading{
+  font-size:30px;
+  margin-left: 20px;
+  color: #0d161b;
+}
 .loader {
   position: relative;
   width: 108px;

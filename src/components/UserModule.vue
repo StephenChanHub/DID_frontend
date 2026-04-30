@@ -1,21 +1,40 @@
 <template>
   <div class="user-module-wrapper">
-    <div class="user-module" @click="handleUserClick">
-      <div v-if="!userStore.avatar" class="text-avatar-mini">
-        {{ userStore.avatarText }}
+    <ElectricBorder
+      v-if="userStore.isLoggedIn && userStore.stamina > 80"
+      :border-radius="18"
+      className="eb-user-module"
+    >
+      <div class="user-module" @click="handleUserClick">
+        <div v-if="!userStore.avatar" class="text-avatar-mini">
+          {{ userStore.avatarText }}
+        </div>
       </div>
-    </div>
-    <div v-if="userStore.isLoggedIn" class="stamina-bar-wrap">
-      <div class="stamina-bar-fill" :style="{ width: staminaPercent + '%' }"></div>
-      <canvas ref="staminaCanvasRef" class="stamina-canvas" />
-      <span class="stamina-text">{{ userStore.stamina }}/{{ userStore.maxStamina }}</span>
-    </div>
+
+    </ElectricBorder>
+
+    
+
+    <template v-else>
+      <div class="user-module" @click="handleUserClick">
+        <div v-if="!userStore.avatar" class="text-avatar-mini">
+          {{ userStore.avatarText }}
+        </div>
+      </div>
+
+      <div v-if="userStore.isLoggedIn" class="stamina-bar-wrap">
+        <div class="stamina-bar-fill" :style="{ width: staminaPercent + '%' }"></div>
+        <canvas ref="staminaCanvasRef" class="stamina-canvas" />
+        <span class="stamina-text">{{ userStore.stamina }}/{{ userStore.maxStamina }}</span>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '@/store/user';
+import ElectricBorder from '@/components/Electricborder.vue';
 
 const userStore = useUserStore();
 
@@ -118,9 +137,9 @@ const handleUserClick = () => {
 }
 
 .text-avatar-mini {
-  width: 58px;
-  height: 58px;
-  border-radius: 12px;
+  width: 60px;
+  height: 60px;
+  border-radius: 0px;
   background: var(--primary-color);
   color: #fff;
   display: flex;
@@ -184,5 +203,12 @@ const handleUserClick = () => {
   text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
   line-height: 1;
   z-index: 2;
+}
+
+.eb-user-module {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 </style>

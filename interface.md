@@ -397,6 +397,17 @@ GET /api/materials/1
 - **上限**：体力不会超过 `max_stamina`
 - **补給**：可使用 food 类物品恢复体力（参见游戏接口）
 
+### 每日答题限制
+
+- **上限**：每天最多答题 **50 次**
+- **重置**：每天 0 点自动重置
+- **超限**：超过 50 次后返回 403，不消耗体力、不检验答案、不触发奖励
+
+### 奖励冷却
+
+- **24h 冷却**：同一素材通过后，24 小时内再次通过不会重复获得掉落奖励
+- **说明**：冷却期内仍然可以答题（消耗体力、计入每日次数、检验答案），只是不触发掉落
+
 ### 1. 提交练习答案
 
 **提交用户对素材的练习答案并获取评分及掉落奖励**
@@ -429,12 +440,14 @@ GET /api/materials/1
     - `val`: 用户答案值
 
 - **评分规则**:
-  1. **体力检查**: 体力不足 10 时返回 403，不允许提交
-  2. **体力扣减**: 每次提交消耗 10 体力
-  3. **做题统计**: 每次提交 `total_questions` +1（无论对错）
-  4. **正确率计算**: 对比用户答案和标准答案
-  5. **通过标准**: ≥60% 正确率
-  6. **掉落判定**（仅通过时触发）：根据 `material_reward_configs` 配置的概率掉落 items 或 collections
+  1. **每日限制检查**: 每日答题次数 ≥ 50 时返回 403，不消耗体力
+  2. **体力检查**: 体力不足 10 时返回 403，不允许提交
+  3. **体力扣减**: 每次提交消耗 10 体力，同时每日计数 +1
+  4. **做题统计**: 每次提交 `total_questions` +1（无论对错）
+  5. **正确率计算**: 对比用户答案和标准答案
+  6. **通过标准**: ≥60% 正确率
+  7. **奖励冷却检查**（仅通过时）：同一素材 24h 内只能获得一次掉落奖励
+  8. **掉落判定**（通过 + 不在冷却期）：根据 `material_reward_configs` 配置的概率掉落 items 或 collections
 
 - **成功响应（通过并有掉落）** (200):
 
@@ -444,6 +457,8 @@ GET /api/materials/1
   "correctCount": 5,
   "totalQuestions": 8,
   "stamina": 75,
+  "dailyQuestionsCount": 12,
+  "dailyQuestionsLimit": 50,
   "message": "恭喜！获得 🍎 魔法苹果 x2、📀 爵士专辑",
   "drops": [
     {
@@ -500,6 +515,8 @@ GET /api/materials/1
   "correctCount": 5,
   "totalQuestions": 8,
   "stamina": 75,
+  "dailyQuestionsCount": 12,
+  "dailyQuestionsLimit": 50,
   "message": "通过但未掉落物品，继续加油！",
   "drops": [],
   "answerDetails": [ ... ]
@@ -514,7 +531,25 @@ GET /api/materials/1
   "correctCount": 3,
   "totalQuestions": 8,
   "stamina": 75,
+  "dailyQuestionsCount": 12,
+  "dailyQuestionsLimit": 50,
   "message": "正确率未达标（3/8），无奖励",
+  "drops": [],
+  "answerDetails": [ ... ]
+}
+```
+
+- **成功响应（通过但 24h 冷却中）** (200):
+
+```json
+{
+  "isPassed": true,
+  "correctCount": 7,
+  "totalQuestions": 8,
+  "stamina": 75,
+  "dailyQuestionsCount": 12,
+  "dailyQuestionsLimit": 50,
+  "message": "24小时内已获得该题奖励，请明天再来",
   "drops": [],
   "answerDetails": [ ... ]
 }
@@ -525,7 +560,9 @@ GET /api/materials/1
   - `correctCount`: 答对题目数
   - `totalQuestions`: 总题目数
   - `stamina`: 剩余体力值
-  - `message`: 详细结果信息（包含掉落情况）
+  - `dailyQuestionsCount`: 今日已答题次数（含本次）
+  - `dailyQuestionsLimit`: 每日答题上限（50）
+  - `message`: 详细结果信息（包含掉落/冷却情况）
   - `drops`: 掉落的奖励数组
     - `rewardType`: 奖励类型（`item` 或 `collection`）
     - `rewardId`: 奖励ID
@@ -543,8 +580,18 @@ GET /api/materials/1
 
 - **错误响应**:
   - 400: 参数验证失败（materialId非数字，answers格式错误）
-  - 403: 体力不足（`stamina < 10`），响应包含当前体力值
+  - 403: 每日次数用尽（返回 403）、体力不足（返回 403）
   - 500: 服务器内部错误
+
+- **每日次数用尽响应** (403):
+
+```json
+{
+  "message": "今日答题次数已用完（50/50），请明天再来",
+  "dailyQuestionsCount": 50,
+  "dailyQuestionsLimit": 50
+}
+```
 
 - **体力不足响应** (403):
 
@@ -843,7 +890,68 @@ GET /api/materials/1
 
 ---
 
-### 5. 商店购买
+### 5. 获取商店物品列表
+
+**获取可购买的食物物品列表**
+
+- **URL**: `/api/shop/items`
+- **Method**: `GET`
+- **认证**: 需要用户Token
+
+- **说明**: 仅返回 `type='food'` 且 `buy_price > 0` 的物品，供商店界面展示可购买的食物。
+
+- **成功响应** (200):
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "name": "魔法苹果",
+      "emoji": "🍎",
+      "type": "food",
+      "description": "回复体力的神奇苹果",
+      "recovery_value": 20,
+      "buy_price": 50,
+      "sell_price": 0
+    }
+  ]
+}
+```
+
+---
+
+### 6. 获取商店收藏品列表
+
+**获取可购买的收藏品列表**
+
+- **URL**: `/api/shop/collections`
+- **Method**: `GET`
+- **认证**: 需要用户Token
+
+- **说明**: 仅返回 `buy_price > 0` 的收藏品，供商店界面展示可购买的收藏品。
+
+- **成功响应** (200):
+
+```json
+{
+  "collections": [
+    {
+      "id": 1,
+      "name": "爵士专辑",
+      "category": "album",
+      "image_url": "/uploads/image/jazz_album.jpg",
+      "media_url": "/uploads/media/jazz_music.mp3",
+      "buy_price": 200,
+      "description": "经典爵士乐合辑"
+    }
+  ]
+}
+```
+
+---
+
+### 7. 商店购买
 
 **使用 Coins 购买收藏品或食物物品**
 
@@ -910,7 +1018,7 @@ GET /api/materials/1
 
 ---
 
-### 6. 查看我的收藏品
+### 8. 查看我的收藏品
 
 **获取用户已购买的收藏品列表**
 
@@ -1499,6 +1607,8 @@ GET /api/materials/admin/materials/1/questions
   - `media_url` (可选): 核心资源 URL
   - `description` (可选): 描述
 
+- **文件上传**: 文件需先通过上传接口上传，获取URL后再创建收藏品
+
 #### 11.4 更新收藏品
 
 - **URL**: `/api/admin/collections/:id`
@@ -1506,11 +1616,19 @@ GET /api/materials/admin/materials/1/questions
 - **认证**: 需要管理员Token
 - **请求体**: 同创建，所有字段可选
 
+- **注意**:
+  - 如果更新了 `image_url` 或 `media_url`，旧的对应文件会从服务器上删除（先更新数据库，再删旧文件）
+  - 如果旧文件不存在于磁盘上，会自动跳过删除操作，不影响更新
+
 #### 11.5 删除收藏品
 
 - **URL**: `/api/admin/collections/:id`
 - **Method**: `DELETE`
 - **认证**: 需要管理员Token
+
+- **注意**:
+  - 删除收藏品会同时删除 `user_collections` 中的用户购买记录
+  - 收藏品关联的图片和媒体文件会从服务器上同步删除（先删数据库记录，再删文件）
 
 ---
 
@@ -1712,7 +1830,7 @@ Content-Type: multipart/form-data
 - **错误响应**:
   - 400: 参数验证失败（文件名或类型为空、类型无效）
   - 404: 文件不存在
-  - 409: 文件正在被素材使用，无法删除（响应中包含素材名称和 ID）
+  - 409: 文件正在被素材或收藏品使用，无法删除（响应中包含素材/收藏品名称和 ID）
   - 500: 服务器内部错误
 
 ````
@@ -1831,11 +1949,11 @@ const API_BASE_URL =
 
 ## 📝 更新日志
 
-### 2026-04-28
+### 2026-04-29
 
-- **商店接口扩展**：`POST /api/shop/buy` 现在同时支持购买食物物品（`itemId` + `quantity`）
-- 仅 `food` 类型物品可被购买（`item` 类型只能出售，不可购买）
-- 更新 `items` 表的 `buy_price` 字段生效：food 物品可通过商店使用 Coins 购买
-- 更新接口文档，完善商店购买接口说明
+- 新增 `GET /api/shop/items` — 获取可购买的食物物品列表（用户 Token）
+- 新增 `GET /api/shop/collections` — 获取可购买的收藏品列表（用户 Token）
+- 解决普通用户无法获取商店商品数据的问题（原 `/admin/items` 和 `/admin/collections` 仅限管理员访问）
+- **收藏品文件管理对齐素材**：更新/删除收藏品时同步清理关联文件；文件管理删除接口增加收藏品引用检查；收藏品 `image_url`/`media_url` 默认值改为 `null`（与素材一致）
 
 ---

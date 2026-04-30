@@ -9,7 +9,7 @@
         v-for="item in collections"
         :key="item.collection_id"
         class="card"
-        @click="openMedia(item)"
+        @click="handleClick(item)"
       >
         <div class="thumb">
           <img
@@ -22,7 +22,6 @@
         </div>
         <div class="cardBody">
           <h3 class="title">{{ item.name }}</h3>
-          <span class="category-tag">{{ item.category }}</span>
         </div>
       </article>
     </div>
@@ -47,6 +46,10 @@ interface CollectionItem {
   description: string;
 }
 
+const emit = defineEmits<{
+  'open-album': [item: CollectionItem];
+}>();
+
 const collections = ref<CollectionItem[]>([]);
 const loading = ref(false);
 
@@ -61,6 +64,14 @@ const fetchCollections = async () => {
     collections.value = [];
   } finally {
     loading.value = false;
+  }
+};
+
+const handleClick = (item: CollectionItem) => {
+  if (item.category === 'album') {
+    emit('open-album', item);
+  } else {
+    openMedia(item);
   }
 };
 
@@ -113,8 +124,8 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchCollections(); });
 }
 
 .thumb {
-  width: 64px;
-  height: 64px;
+  width: 100px;
+  height: 100px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 16px;
   display: flex;
@@ -141,17 +152,6 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchCollections(); });
   color: black;
   font-weight: 500;
   text-align: center;
-}
-
-.category-tag {
-  margin-top: 6px;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 8px;
-  background: rgba(var(--primary-color-rgb, 74, 144, 226), 0.12);
-  color: var(--primary-color);
-  font-weight: 600;
-  text-transform: capitalize;
 }
 
 .loading-state,
@@ -181,8 +181,8 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchCollections(); });
   }
 
   .thumb {
-    width: 48px;
-    height: 48px;
+    width: 100px;
+    height: 100px;
     margin-bottom: 8px;
   }
 

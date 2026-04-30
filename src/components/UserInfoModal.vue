@@ -11,22 +11,55 @@ const form = ref({
   code: ''
 });
 const sendingCode = ref(false);
+const codeCooldown = ref(0);
+const submitCooldown = ref(0);
+let codeTimer: ReturnType<typeof setInterval> | null = null;
+let submitTimer: ReturnType<typeof setInterval> | null = null;
 
 const close = () => userStore.toggleInfoModal(false);
+
+const startCodeCooldown = (seconds = 60) => {
+  if (codeTimer) clearInterval(codeTimer);
+  codeCooldown.value = seconds;
+  codeTimer = setInterval(() => {
+    codeCooldown.value--;
+    if (codeCooldown.value <= 0) {
+      if (codeTimer) clearInterval(codeTimer);
+      codeTimer = null;
+    }
+  }, 1000);
+};
+
+const startSubmitCooldown = (seconds: number) => {
+  if (submitTimer) clearInterval(submitTimer);
+  submitCooldown.value = seconds;
+  submitTimer = setInterval(() => {
+    submitCooldown.value--;
+    if (submitCooldown.value <= 0) {
+      if (submitTimer) clearInterval(submitTimer);
+      submitTimer = null;
+    }
+  }, 1000);
+};
 
 const sendCode = async () => {
   if (!form.value.email.trim()) {
     alert('邮箱不能为空');
     return;
   }
+  if (codeCooldown.value > 0) return;
   sendingCode.value = true;
   try {
     await request.post('/auth/send-reset-code', {
       email: form.value.email
     });
+    startCodeCooldown();
     alert('验证码已发送，请检查邮箱');
-  } catch {
-    // 错误已在拦截器中处理
+  } catch (err: any) {
+    if (err.response?.status === 429) {
+      startCodeCooldown(err.retryAfter || 60);
+    }
+    alert(err.response?.data?.message || '验证码发送失败');
   } finally {
     sendingCode.value = false;
   }
@@ -60,6 +93,8 @@ const handleSubmit = async () => {
       });
 
       alert('密码重置成功');
+      form.value.code = '';
+      form.value.password = '';
 
       // 如果同时也修改了昵称，单独调用更新
       if (hasNicknameChange) {
@@ -83,8 +118,11 @@ const handleSubmit = async () => {
     }
 
     close();
-  } catch {
-    // 错误已在拦截器中处理
+  } catch (err: any) {
+    if (err.response?.status === 429) {
+      startSubmitCooldown(err.retryAfter || 60);
+    }
+    alert(err.response?.data?.message || '操作失败');
   }
 };
 </script>
@@ -118,15 +156,17 @@ const handleSubmit = async () => {
         <label>Verification Code</label>
         <div class="code-row">
           <input v-model="form.code" type="text" placeholder="Enter 6-digit code" maxlength="6" />
-          <button class="btn-send-code" @click="sendCode" :disabled="sendingCode">
-            {{ sendingCode ? 'Sending...' : 'Send Code' }}
+          <button class="btn-send-code" @click="sendCode" :disabled="sendingCode || codeCooldown > 0">
+            {{ sendingCode ? 'Sending...' : codeCooldown > 0 ? `${codeCooldown}s` : 'Send Code' }}
           </button>
         </div>
       </div>
 
       <div class="btn-group style-image">
         <button class="btn-cancel" @click="close">Cancel</button>
-        <button class="btn-submit style-image" @click="handleSubmit">Submit</button>
+        <button class="btn-submit style-image" :disabled="submitCooldown > 0" @click="handleSubmit">
+          {{ submitCooldown > 0 ? `${submitCooldown}s` : 'Submit' }}
+        </button>
       </div>
     </div>
   </div>
@@ -141,7 +181,7 @@ const handleSubmit = async () => {
 .info-card.style-image {
   background: rgba(255, 255, 255, 0.95); /* 纯白背景 */
   padding: 40px; /* 增加内边距 */
-  border-radius: 24px; /* 增加圆角 */
+  border-radius: 36px; /* 增加圆角 */
   width: 320px;
   border: 1px solid rgba(0,0,0,0.1);
   box-shadow: 0 20px 40px rgba(0,0,0,0.1);
@@ -180,7 +220,7 @@ const handleSubmit = async () => {
 .btn-group.style-image {
   display: flex; gap: 15px; margin-top: 30px; /* 增加上间距和间隙 */
 }
-button { flex: 1; padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; }
+button { flex: 1; padding: 15px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
 
 .btn-cancel {
   background: rgba(0,0,0,0.05); color: #666; /* 灰色背景，灰色文本 */

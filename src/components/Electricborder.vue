@@ -21,8 +21,8 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 
 const props = defineProps({
   color: { type: String, default: '#5227FF' },       // 描边颜色 (传空或未设置时跟随 --primary-color CSS 变量)
-  speed: { type: Number, default: 1 },                // 电流波动动画速度倍率
-  chaos: { type: Number, default: 0.06 },             // 电流抖动幅度 (0~1, 越小越平滑)
+  speed: { type: Number, default: 2 },                // 电流波动动画速度倍率
+  chaos: { type: Number, default: 0.1 },             // 电流抖动幅度 (0~1, 越小越平滑)
   borderRadius: { type: Number, default: 24 },        // 容器圆角大小 (px)
   className: { type: String, default: '' },           // 追加到根元素的 CSS 类名
   customStyle: { type: Object, default: () => ({}) }  // 自定义内联样式

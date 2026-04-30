@@ -16,6 +16,8 @@ CREATE TABLE `users` (
 `last_stamina_update` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '体力最后一次变动时间',
 `is_active` TINYINT(1) DEFAULT 0 COMMENT '邮箱是否验证成功: 0未验证, 1已验证',
 `last_practice_date` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+`daily_questions_count` INT DEFAULT 0 COMMENT '今日已答题次数',
+`daily_questions_date` DATE DEFAULT NULL COMMENT '答题计数日期',
 `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
 `role` ENUM('USER', 'ADMIN') DEFAULT 'USER'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -128,3 +130,7 @@ CREATE TABLE `material_reward_configs` (
 `max_quantity` INT DEFAULT 1 COMMENT '最大掉落数量',
 FOREIGN KEY (`material_id`) REFERENCES `materials`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- 13. 数据迁移 (2026-04-28)
+ALTER TABLE `users` ADD COLUMN `daily_questions_count` INT DEFAULT 0 COMMENT '今日已答题次数' AFTER `last_practice_date`;
+ALTER TABLE `users` ADD COLUMN `daily_questions_date` DATE DEFAULT NULL COMMENT '答题计数日期' AFTER `daily_questions_count`;

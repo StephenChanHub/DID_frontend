@@ -69,7 +69,7 @@ const handleLogout = () => {
   width: 360px; 
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(200px); 
-  border-radius: 24px; padding: 25px;
+  border-radius: 36px; padding: 25px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
   border: 1px solid rgba(255,255,255,0.5);
 }
@@ -125,7 +125,7 @@ const handleLogout = () => {
   border: 1px solid var(--primary-color);
   color: var(--primary-color);
   background: transparent;
-  border-radius: 12px;
+  border-radius: 20px;
   padding: 10px 16px;
   font-weight: 600;
   cursor: pointer;
