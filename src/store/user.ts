@@ -22,6 +22,30 @@ export const useUserStore = defineStore('user', {
     username: (state) => state.email
   },
   actions: {
+    clearSensitiveState() {
+      this.token = '';
+      this.userId = 0;
+      this.email = '';
+      this.nickname = 'Guest';
+      this.level = 'A1';
+      this.coins = 0;
+      this.stamina = 100;
+      this.maxStamina = 100;
+      this.totalQuestions = 0;
+      this.exerciseCount = 0;
+      this.avatar = '';
+      localStorage.removeItem('did_token');
+      localStorage.removeItem('did_userId');
+      localStorage.removeItem('did_email');
+      localStorage.removeItem('did_nickname');
+      localStorage.removeItem('did_level');
+      localStorage.removeItem('did_coins');
+      localStorage.removeItem('did_stamina');
+      localStorage.removeItem('did_maxStamina');
+      localStorage.removeItem('did_totalQuestions');
+      localStorage.removeItem('did_exerciseCount');
+      localStorage.removeItem('did_avatar');
+    },
     loginSuccess(data: any) {
       this.token = data.token || '';
       this.userId = data.userId || 0;
@@ -51,28 +75,7 @@ export const useUserStore = defineStore('user', {
       this.showAuthModal = false;
     },
     logout() {
-      this.token = '';
-      this.userId = 0;
-      this.email = '';
-      this.nickname = 'Guest';
-      this.level = 'A1';
-      this.coins = 0;
-      this.stamina = 100;
-      this.maxStamina = 100;
-      this.totalQuestions = 0;
-      this.exerciseCount = 0;
-      this.avatar = '';
-      localStorage.removeItem('did_token');
-      localStorage.removeItem('did_userId');
-      localStorage.removeItem('did_email');
-      localStorage.removeItem('did_nickname');
-      localStorage.removeItem('did_level');
-      localStorage.removeItem('did_coins');
-      localStorage.removeItem('did_stamina');
-      localStorage.removeItem('did_maxStamina');
-      localStorage.removeItem('did_totalQuestions');
-      localStorage.removeItem('did_exerciseCount');
-      localStorage.removeItem('did_avatar');
+      this.clearSensitiveState();
       this.showInfoModal = false;
     },
     toggleInfoModal(show: boolean) {
