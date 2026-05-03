@@ -52,8 +52,8 @@ request.interceptors.response.use(
       const retryAfter = parseInt(headers['retry-after']) || 60;
       err.retryAfter = retryAfter;
       // 429 由各组件自行处理冷却倒计时
-    } else if (status !== 403) {
-      // 403 错误（每日次数用尽、体力不足等）由各组件自行处理，不弹 alert
+    } else if (status !== 403 && status !== 400) {
+      // 403（每日次数用尽、体力不足等）、400（coins不足等业务校验）由各组件自行处理，不弹 alert
       alert('请求失败：' + msg);
     }
     return Promise.reject(err);

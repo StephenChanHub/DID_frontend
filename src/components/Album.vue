@@ -33,9 +33,10 @@ const props = defineProps<{
   collectionId: number;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   close: [];
   buy: [collectionId: number];
+  timeout: [];
 }>();
 
 const container = ref<HTMLElement | null>(null);
@@ -45,6 +46,7 @@ let scene: THREE.Scene | null = null;
 let camera: THREE.PerspectiveCamera | null = null;
 let controls: OrbitControls | null = null;
 let animationId: number | null = null;
+let autoCloseTimer: ReturnType<typeof setTimeout> | null = null;
 
 const resolvedMediaUrl = computed(() => {
   if (!props.mediaUrl) return undefined;
@@ -84,7 +86,7 @@ const initThree = () => {
   controls.maxPolarAngle = (5 * Math.PI) / 6;
   
   // 缩放范围限制[cite: 4]
-  controls.maxDistance = 6;
+  controls.maxDistance = 10;
   controls.minDistance = 2;
   controls.enablePan = false;
 
@@ -185,7 +187,20 @@ watch(() => props.visible, (v) => {
       startAudio();
     }, 0);
     window.addEventListener('resize', handleResize);
+    if (props.mode === 'store') {
+      autoCloseTimer = setTimeout(() => {
+        stopAudio();
+        destroyThree();
+        window.removeEventListener('resize', handleResize);
+        emit('timeout');
+        emit('close');
+      }, 5000);
+    }
   } else {
+    if (autoCloseTimer != null) {
+      clearTimeout(autoCloseTimer);
+      autoCloseTimer = null;
+    }
     stopAudio();
     destroyThree();
     window.removeEventListener('resize', handleResize);
@@ -193,6 +208,10 @@ watch(() => props.visible, (v) => {
 });
 
 onUnmounted(() => {
+  if (autoCloseTimer != null) {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = null;
+  }
   stopAudio();
   destroyThree();
   window.removeEventListener('resize', handleResize);
@@ -256,11 +275,11 @@ onUnmounted(() => {
   align-items: center;
   gap: 24px;
   padding: 14px 28px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 24px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .price-tag {
@@ -273,6 +292,7 @@ onUnmounted(() => {
 .store-btns {
   display: flex;
   gap: 12px;
+  
 }
 
 .btn {

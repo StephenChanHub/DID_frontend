@@ -3,7 +3,7 @@
     <img class="bg-img" src="/public/store.png" />
     <div class="Wrap">
       <span class="Salesperson">👾</span>
-      <span class="Text">{{ mode === 'buy' ? 'Welcome to the DID Store! What do you need?' : 'What do you want to sell?' }}</span>
+      <span class="Text">{{ feedbackMessage }}</span>
     </div>
 
     <div class="actionGroup">
@@ -82,12 +82,13 @@
       :collection-id="albumItem?.id || 0"
       @close="showAlbum = false"
       @buy="handleAlbumBuy"
+      @timeout="handleAlbumTimeout"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/store/user';
 import request from '@/api/request';
@@ -110,6 +111,19 @@ const salesperson = ref(Math.floor(Math.random() * 3) + 1);
 const mode = ref<'buy' | 'sell'>('buy');
 const selectedCategory = ref('food');
 const loading = ref(false);
+
+const feedbackMessage = ref('Welcome to the DID Store! What do you need?');
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+const setFeedback = (msg: string) => {
+  if (feedbackTimer) clearTimeout(feedbackTimer);
+  feedbackMessage.value = msg;
+  feedbackTimer = setTimeout(() => {
+    feedbackMessage.value = mode.value === 'buy'
+      ? 'Welcome to the DID Store! What do you need?'
+      : 'What do you want to sell?';
+  }, 5000);
+};
 
 const categories = [
   { value: 'food', label: 'food' },
@@ -226,9 +240,11 @@ const showAlbum = ref(false);
 const albumItem = ref<ProductItem | null>(null);
 
 const handleAlbumBuy = async (collectionId: number) => {
+  const album = albumItem.value;
   try {
     const res: any = await request.post('/shop/buy', { collectionId });
     userStore.updateCoins(res.coins);
+    if (album) setFeedback(`You bought ${album.name} for ${album.buy_price} coins!`);
     showAlbum.value = false;
     await fetchProducts();
     const statsRes: any = await request.get('/user/stats');
@@ -236,14 +252,22 @@ const handleAlbumBuy = async (collectionId: number) => {
       userStore.updateCoins(statsRes.coins);
     }
   } catch (err) {
+    setFeedback("You don't have enough coins! Keep practicing to earn more.");
     console.error('Buy album failed', err);
   }
+};
+
+const handleAlbumTimeout = () => {
+  setFeedback("You can only enjoy it for 5 seconds if you haven't purchased it.");
 };
 
 const switchMode = (m: 'buy' | 'sell') => {
   mode.value = m;
   if (m === 'buy') {
     selectedCategory.value = 'food';
+    feedbackMessage.value = 'Welcome to the DID Store! What do you need?';
+  } else {
+    feedbackMessage.value = 'What do you want to sell?';
   }
   fetchProducts();
 };
@@ -275,26 +299,30 @@ const handleBuy = async (itemId: number, quantity: number) => {
     if (item._isCollection) {
       const res: any = await request.post('/shop/buy', { collectionId: itemId });
       userStore.updateCoins(res.coins);
+      setFeedback(`You bought ${item.name} for ${item.buy_price} coins!`);
     } else {
       const res: any = await request.post('/shop/buy', { itemId, quantity });
       userStore.updateCoins(res.coins);
+      setFeedback(`You bought ${quantity} ${item.name} for ${item.buy_price * quantity} coins!`);
     }
     detailVisible.value = false;
     await fetchProducts();
-    // Refresh user stats
     const statsRes: any = await request.get('/user/stats');
     if (statsRes) {
       userStore.updateCoins(statsRes.coins);
     }
   } catch (err) {
+    setFeedback("You don't have enough coins! Keep practicing to earn more.");
     console.error('Buy failed', err);
   }
 };
 
 const handleSellItem = async (itemId: number, quantity: number) => {
+  const item = selectedItem.value;
   try {
     const res: any = await request.post('/items/sell', { itemId, quantity });
     userStore.updateCoins(res.coins);
+    setFeedback(`You sold ${quantity} ${item.name} for ${item.sell_price * quantity} coins!`);
     detailVisible.value = false;
     await fetchProducts();
   } catch (err) {
@@ -303,6 +331,10 @@ const handleSellItem = async (itemId: number, quantity: number) => {
 };
 
 watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
+
+onUnmounted(() => {
+  if (feedbackTimer) clearTimeout(feedbackTimer);
+});
 </script>
 
 <style scoped>
@@ -584,9 +616,10 @@ watch(() => userStore.isLoggedIn, (v) => { if (v) fetchProducts(); });
 
 .desc {
   margin: 8px 0 0;
-  font-size: 14px;
-  color: black;
-  opacity: 0.7;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--primary-color);
+  opacity: 0.9;
   text-align: center;
 }
 

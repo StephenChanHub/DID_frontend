@@ -386,7 +386,7 @@ const checkAnswer = (q: any) => {
 
 // 格式化答案显示
 const formatAnswerDisplay = (q: any, answer: string) => {
-  if (!answer) return "未作答";
+  if (!answer) return "empty";
 
   const normalized = String(answer).trim().toUpperCase();
 
@@ -398,7 +398,7 @@ const formatAnswerDisplay = (q: any, answer: string) => {
     return option || `选项 ${normalized}`;
   } else if (q.q_type === 'bool') {
     // 判断题：显示完整文本
-    return normalized === 'T' ? '正确 (T)' : '错误 (F)';
+    return normalized === 'T' ? '(T)' : '(F)';
   } else {
     // 填空题：直接显示
     return answer;
